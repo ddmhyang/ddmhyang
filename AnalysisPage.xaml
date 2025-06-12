@@ -6,12 +6,43 @@
              xmlns:local="clr-namespace:WorkPartner"
              xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
              mc:Ignorable="d" 
-             d:DesignHeight="600" d:DesignWidth="480">
+             d:DesignHeight="700" d:DesignWidth="480">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="20">
             <TextBlock Text="작업 패턴 분석" FontSize="24" FontWeight="Bold" Margin="0,0,0,20"/>
 
-            <!-- 전체 요약 및 시간대별 차트 (이전과 동일) -->
+            <!-- [UI 추가] AI 예측 섹션 -->
+            <Border Background="#E3F2FD" BorderBrush="#90CAF9" BorderThickness="1" CornerRadius="5" Padding="15" Margin="0,0,0,15">
+                <StackPanel>
+                    <TextBlock Text="🧠 AI 집중도 예측" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="과목:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ComboBox Grid.Row="0" Grid.Column="1" x:Name="TaskPredictionComboBox" DisplayMemberPath="Text"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="요일:" VerticalAlignment="Center" Margin="0,5,10,5"/>
+                        <ComboBox Grid.Row="1" Grid.Column="1" x:Name="DayOfWeekPredictionComboBox" Margin="0,5,0,5"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="시간:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ComboBox Grid.Row="2" Grid.Column="1" x:Name="HourPredictionComboBox"/>
+
+                        <Button Grid.Row="0" Grid.Column="2" Grid.RowSpan="3" Content="예측" Width="60" Margin="10,0,0,0" Click="PredictButton_Click"/>
+                    </Grid>
+                    <TextBlock x:Name="PredictionResultTextBlock" Text="예상 집중도: -" HorizontalAlignment="Center" FontWeight="Bold" Margin="0,10,0,0" FontSize="14"/>
+                </StackPanel>
+            </Border>
+
+            <!-- ... 나머지 UI (요약, 차트, 제안 등)는 이전과 동일 ... -->
             <Border Background="#F5F5F5" CornerRadius="5" Padding="15" Margin="0,0,0,15">
                 <StackPanel>
                     <TextBlock Text="전체 요약" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
@@ -50,29 +81,21 @@
                     </lvc:CartesianChart>
                 </StackPanel>
             </Border>
-
-            <!-- [UI 변경] 과목별 통계 섹션 -->
             <Border Background="#F5F5F5" CornerRadius="5" Padding="15" Margin="0,0,0,15">
                 <StackPanel>
                     <TextBlock Text="과목별 작업 시간" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
-
-                    <!-- 기간 필터 버튼들 -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <Button Content="오늘" Margin="0,0,5,0" Click="TodayButton_Click"/>
                         <Button Content="이번 주" Margin="0,0,5,0" Click="ThisWeekButton_Click"/>
                         <Button Content="이번 달" Margin="0,0,5,0" Click="ThisMonthButton_Click"/>
                         <Button Content="전체" Margin="0,0,5,0" Click="TotalButton_Click"/>
                     </StackPanel>
-
-                    <!-- 사용자 지정 기간 설정 -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <DatePicker x:Name="StartDatePicker" Width="120"/>
                         <TextBlock Text=" ~ " VerticalAlignment="Center" Margin="5,0"/>
                         <DatePicker x:Name="EndDatePicker" Width="120"/>
                         <Button Content="조회" Margin="10,0,0,0" Click="CustomDateButton_Click"/>
                     </StackPanel>
-
-                    <!-- 분석 결과가 표시될 리스트 -->
                     <ListView x:Name="TaskAnalysisListView" BorderThickness="0" MaxHeight="200">
                         <ListView.View>
                             <GridView>
@@ -83,18 +106,17 @@
                     </ListView>
                 </StackPanel>
             </Border>
-
-            <!-- AI 분석 및 제안 섹션 (이전과 동일) -->
             <Border Background="#FFF7E0" BorderBrush="#FFD6A5" BorderThickness="1" CornerRadius="5" Padding="15">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <TextBlock Text="💡" FontSize="18" VerticalAlignment="Center"/>
                         <TextBlock Text="AI 분석 및 제안" FontSize="18" FontWeight="SemiBold" Margin="10,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <TextBlock x:Name="SuggestionTextBlock" Text="데이터를 분석하여 맞춤형 제안을 준비 중입니다..." TextWrapping="Wrap" FontStyle="Italic"/>
+                    <TextBlock x:Name="GoldenTimeSuggestionTextBlock" TextWrapping="Wrap" FontStyle="Italic" Margin="0,0,0,10"/>
+                    <Separator/>
+                    <TextBlock x:Name="WorkRestPatternSuggestionTextBlock" TextWrapping="Wrap" FontStyle="Italic" Margin="0,10,0,0"/>
                 </StackPanel>
             </Border>
-
         </StackPanel>
     </ScrollViewer>
 </UserControl>

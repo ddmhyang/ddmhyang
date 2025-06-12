@@ -12,9 +12,8 @@ namespace WorkPartner
         public ObservableCollection<string> DistractionProcesses { get; set; }
         public string FocusModeNagMessage { get; set; }
         public int FocusModeNagIntervalSeconds { get; set; }
-
-        // [속성 추가] "키워드-태그" 쌍을 저장하기 위한 Dictionary 입니다.
         public Dictionary<string, string> TagRules { get; set; }
+        public int Coins { get; set; }
 
         public AppSettings()
         {
@@ -36,6 +35,9 @@ namespace WorkPartner
                 { "마감", "#작업" },
                 { "게임", "#취미" }
             };
+
+            Coins = 0; // 코인 초기값 설정
+
         }
     }
 }

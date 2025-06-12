@@ -1,4 +1,5 @@
-﻿using System;
+﻿// 파일: TodoItem.cs
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 
@@ -10,40 +11,24 @@ namespace WorkPartner
         private bool _isCompleted;
         private DateTime? _dueDate;
 
-        public string Text
-        {
-            get => _text;
-            set { _text = value; OnPropertyChanged(nameof(Text)); }
-        }
-
-        public bool IsCompleted
-        {
-            get => _isCompleted;
-            set { _isCompleted = value; OnPropertyChanged(nameof(IsCompleted)); }
-        }
-
-        public DateTime? DueDate
-        {
-            get => _dueDate;
-            set { _dueDate = value; OnPropertyChanged(nameof(DueDate)); }
-        }
-
+        public string Text { get => _text; set { _text = value; OnPropertyChanged(nameof(Text)); } }
+        public bool IsCompleted { get => _isCompleted; set { _isCompleted = value; OnPropertyChanged(nameof(IsCompleted)); } }
+        public DateTime? DueDate { get => _dueDate; set { _dueDate = value; OnPropertyChanged(nameof(DueDate)); } }
         public ObservableCollection<TodoItem> SubTasks { get; set; }
-
-        // [속성 추가] 태그 목록을 저장하기 위한 컬렉션입니다.
         public ObservableCollection<string> Tags { get; set; }
+
+        // [속성 추가] 이 할 일에 대해 보상이 지급되었는지 확인하는 플래그입니다.
+        public bool HasBeenRewarded { get; set; }
 
         public TodoItem()
         {
             Text = "새로운 할 일";
             SubTasks = new ObservableCollection<TodoItem>();
-            Tags = new ObservableCollection<string>(); // Tags 컬렉션 초기화
+            Tags = new ObservableCollection<string>();
+            HasBeenRewarded = false; // 기본값은 '보상 안 됨'
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged(string name)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-        }
+        protected void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

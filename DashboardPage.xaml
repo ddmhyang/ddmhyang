@@ -19,33 +19,50 @@
         </StackPanel>
 
         <StackPanel Grid.Row="1">
-            <Button x:Name="DiaryButton" Content="다이어리 보기" Width="150" HorizontalAlignment="Center" Margin="0,5,0,10" Click="DiaryButton_Click"/>
-
+            <DockPanel Margin="0,5,0,10">
+                <Button x:Name="DiaryButton" Content="다이어리 보기" Width="150" Click="DiaryButton_Click" HorizontalAlignment="Left"/>
+                <Border Background="#FFFDE7" CornerRadius="10" Padding="10,5" HorizontalAlignment="Right">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="💰" VerticalAlignment="Center" FontSize="14"/>
+                        <TextBlock x:Name="CoinDisplayTextBlock" Text="0" Margin="5,0,0,0" VerticalAlignment="Center" FontWeight="Bold" FontSize="14"/>
+                    </StackPanel>
+                </Border>
+            </DockPanel>
+            
             <StackPanel x:Name="DashboardDetailsPanel" Visibility="Collapsed">
                 <Border Background="#F0F0F0" CornerRadius="5" Padding="10,5" Margin="0,0,0,10">
                     <StackPanel>
                         <TextBlock x:Name="CurrentTaskDisplay" Text="선택된 과목 없음" HorizontalAlignment="Center" FontWeight="Bold"/>
                         <TextBlock x:Name="SelectedTaskTotalTimeDisplay" Text="선택 과목 총계: 00:00:00" HorizontalAlignment="Center" Foreground="Gray" Margin="0,5,0,0"/>
                         <TextBlock x:Name="ActiveProcessDisplay" Text="활성 프로그램: -" HorizontalAlignment="Center" Foreground="Blue" Margin="0,5,0,0"/>
+
+                        <!-- [UI 추가] 집중도 평가 UI. 평소에는 숨겨져 있습니다. -->
+                        <StackPanel x:Name="SessionReviewPanel" Visibility="Collapsed" Margin="0,10,0,0">
+                            <TextBlock Text="방금 종료된 세션의 집중도는 어떠셨나요?" HorizontalAlignment="Center" Foreground="DarkBlue" FontWeight="SemiBold"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+                                <Button Content="⭐ 1" Tag="1" Margin="2" Click="RateSessionButton_Click"/>
+                                <Button Content="⭐ 2" Tag="2" Margin="2" Click="RateSessionButton_Click"/>
+                                <Button Content="⭐ 3" Tag="3" Margin="2" Click="RateSessionButton_Click"/>
+                                <Button Content="⭐ 4" Tag="4" Margin="2" Click="RateSessionButton_Click"/>
+                                <Button Content="⭐ 5" Tag="5" Margin="2" Click="RateSessionButton_Click"/>
+                            </StackPanel>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
-
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-
                     <StackPanel Grid.Column="0" Margin="0,0,5,0">
                         <TextBlock Text="측정 과목" FontWeight="Bold" Margin="0,0,0,5"/>
                         <ListBox x:Name="TaskListBox" Height="150" SelectionChanged="TaskListBox_SelectionChanged"/>
                         <DockPanel Margin="0,5,0,0">
-                            <Button DockPanel.Dock="Right" Content="-" Width="25" Click="DeleteTaskButton_Click" ToolTip="선택한 과목 삭제"/>
-                            <Button DockPanel.Dock="Right" Content="+" Width="25" Click="AddTaskButton_Click" ToolTip="새 과목 추가"/>
-                            <TextBox x:Name="TaskInput" KeyDown="TaskInput_KeyDown" ToolTip="과목 이름 입력 후 Enter"/>
+                            <Button DockPanel.Dock="Right" Content="-" Width="25" Click="DeleteTaskButton_Click"/>
+                            <Button DockPanel.Dock="Right" Content="+" Width="25" Click="AddTaskButton_Click"/>
+                            <TextBox x:Name="TaskInput" KeyDown="TaskInput_KeyDown"/>
                         </DockPanel>
                     </StackPanel>
-
                     <StackPanel Grid.Column="1" Margin="5,0,0,0">
                         <TextBlock Text="오늘의 할 일" FontWeight="Bold" Margin="0,0,0,5"/>
                         <TreeView x:Name="TodoTreeView" Height="150">
@@ -87,9 +104,9 @@
                             </TreeView.ItemTemplate>
                         </TreeView>
                         <DockPanel Margin="0,5,0,0">
-                            <Button DockPanel.Dock="Right" Content="-" Width="25" Click="DeleteTodoButton_Click" ToolTip="선택한 할 일 삭제"/>
-                            <Button DockPanel.Dock="Right" Content="+" Width="25" Click="AddTodoButton_Click" ToolTip="새 할 일 추가"/>
-                            <TextBox x:Name="TodoInput" KeyDown="TodoInput_KeyDown" ToolTip="할 일 입력 후 Enter"/>
+                            <Button DockPanel.Dock="Right" Content="-" Width="25" Click="DeleteTodoButton_Click"/>
+                            <Button DockPanel.Dock="Right" Content="+" Width="25" Click="AddTodoButton_Click"/>
+                            <TextBox x:Name="TodoInput" KeyDown="TodoInput_KeyDown"/>
                         </DockPanel>
                         <ItemsControl x:Name="SuggestedTagsItemsControl" Margin="0,5,0,0">
                             <ItemsControl.ItemsPanel>
