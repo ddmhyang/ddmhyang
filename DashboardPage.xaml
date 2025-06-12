@@ -29,24 +29,27 @@
                 </Border>
             </DockPanel>
 
+            <!-- [UI 수정] 집중도 평가 UI를 다이어리 패널 밖으로 이동시켰습니다. -->
+            <Border x:Name="SessionReviewPanel" Visibility="Collapsed" Margin="0,0,0,10" Background="#E3F2FD" CornerRadius="5" Padding="10,5">
+                <StackPanel>
+                    <TextBlock Text="방금 종료된 세션의 집중도는 어떠셨나요?" HorizontalAlignment="Center" Foreground="DarkBlue" FontWeight="SemiBold"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+                        <Button Content="⭐ 1" Tag="1" Margin="2" Click="RateSessionButton_Click"/>
+                        <Button Content="⭐ 2" Tag="2" Margin="2" Click="RateSessionButton_Click"/>
+                        <Button Content="⭐ 3" Tag="3" Margin="2" Click="RateSessionButton_Click"/>
+                        <Button Content="⭐ 4" Tag="4" Margin="2" Click="RateSessionButton_Click"/>
+                        <Button Content="⭐ 5" Tag="5" Margin="2" Click="RateSessionButton_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <StackPanel x:Name="DashboardDetailsPanel" Visibility="Collapsed">
+                <!-- 정보 표시 영역 (이제 집중도 평가는 이곳에 없습니다) -->
                 <Border Background="#F0F0F0" CornerRadius="5" Padding="10,5" Margin="0,0,0,10">
                     <StackPanel>
                         <TextBlock x:Name="CurrentTaskDisplay" Text="선택된 과목 없음" HorizontalAlignment="Center" FontWeight="Bold"/>
                         <TextBlock x:Name="SelectedTaskTotalTimeDisplay" Text="선택 과목 총계: 00:00:00" HorizontalAlignment="Center" Foreground="Gray" Margin="0,5,0,0"/>
                         <TextBlock x:Name="ActiveProcessDisplay" Text="활성 프로그램: -" HorizontalAlignment="Center" Foreground="Blue" Margin="0,5,0,0"/>
-
-                        <!-- [UI 추가] 집중도 평가 UI. 평소에는 숨겨져 있습니다. -->
-                        <StackPanel x:Name="SessionReviewPanel" Visibility="Collapsed" Margin="0,10,0,0">
-                            <TextBlock Text="방금 종료된 세션의 집중도는 어떠셨나요?" HorizontalAlignment="Center" Foreground="DarkBlue" FontWeight="SemiBold"/>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
-                                <Button Content="⭐ 1" Tag="1" Margin="2" Click="RateSessionButton_Click"/>
-                                <Button Content="⭐ 2" Tag="2" Margin="2" Click="RateSessionButton_Click"/>
-                                <Button Content="⭐ 3" Tag="3" Margin="2" Click="RateSessionButton_Click"/>
-                                <Button Content="⭐ 4" Tag="4" Margin="2" Click="RateSessionButton_Click"/>
-                                <Button Content="⭐ 5" Tag="5" Margin="2" Click="RateSessionButton_Click"/>
-                            </StackPanel>
-                        </StackPanel>
                     </StackPanel>
                 </Border>
                 <Grid>

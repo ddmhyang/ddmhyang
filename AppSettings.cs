@@ -1,4 +1,4 @@
-﻿// 파일: AppSettings.cs
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
@@ -14,12 +14,14 @@ namespace WorkPartner
         public string FocusModeNagMessage { get; set; }
         public int FocusModeNagIntervalSeconds { get; set; }
         public Dictionary<string, string> TagRules { get; set; }
-
-        // [속성 추가] 사용자의 재화(코인)를 저장합니다.
         public int Coins { get; set; }
+
+        // [속성 추가] 사용자가 구매한 아이템의 ID를 저장할 목록입니다.
+        public List<Guid> OwnedItemIds { get; set; }
 
         public AppSettings()
         {
+            // ... 기존 기본값 설정 ...
             IsIdleDetectionEnabled = true;
             IdleTimeoutSeconds = 60;
             WorkProcesses = new ObservableCollection<string>();
@@ -28,7 +30,10 @@ namespace WorkPartner
             FocusModeNagMessage = "할 일을 합시다!";
             FocusModeNagIntervalSeconds = 30;
             TagRules = new Dictionary<string, string>();
-            Coins = 0; // 코인 초기값 설정
+            Coins = 0;
+
+            // 소지품 목록 초기화
+            OwnedItemIds = new List<Guid>();
         }
     }
 }
