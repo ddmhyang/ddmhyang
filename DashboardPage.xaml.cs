@@ -16,7 +16,6 @@ namespace WorkPartner
 {
     public partial class DashboardPage : UserControl
     {
-        // ... 변수 선언부는 이전과 동일 ...
         #region 변수 선언
         private readonly string _tasksFilePath = "tasks.json";
         private readonly string _todosFilePath = "todos.json";
@@ -59,17 +58,10 @@ namespace WorkPartner
         }
 
         #region 데이터 저장 / 불러오기
-        private void LoadAllData()
-        {
-            LoadSettings();
-            LoadTasks();
-            LoadTodos();
-            LoadTimeLogs();
-            UpdateCoinDisplay(); // [호출 추가] 코인 표시를 업데이트합니다.
-        }
-        // ... 나머지 Load/Save 함수는 이전과 동일 ...
         private void InitializeTimer() { _stopwatch = new Stopwatch(); _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) }; _timer.Tick += Timer_Tick; _timer.Start(); }
+        private void LoadAllData() { LoadSettings(); LoadTasks(); LoadTodos(); LoadTimeLogs(); UpdateCoinDisplay(); }
         private void LoadSettings() { if (!File.Exists(_settingsFilePath)) { _settings = new AppSettings(); return; } var json = File.ReadAllText(_settingsFilePath); _settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings(); }
+        private void SaveSettings() { var options = new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }; var json = JsonSerializer.Serialize(_settings, options); File.WriteAllText(_settingsFilePath, json); }
         private void LoadTasks() { if (!File.Exists(_tasksFilePath)) return; var json = File.ReadAllText(_tasksFilePath); TaskItems = JsonSerializer.Deserialize<ObservableCollection<TaskItem>>(json) ?? new ObservableCollection<TaskItem>(); TaskListBox.ItemsSource = TaskItems; }
         private void SaveTasks() { var options = new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }; var json = JsonSerializer.Serialize(TaskItems, options); File.WriteAllText(_tasksFilePath, json); }
         private void LoadTodos() { if (!File.Exists(_todosFilePath)) return; var json = File.ReadAllText(_todosFilePath); TodoItems = JsonSerializer.Deserialize<ObservableCollection<TodoItem>>(json) ?? new ObservableCollection<TodoItem>(); TodoTreeView.ItemsSource = TodoItems; }
@@ -80,30 +72,25 @@ namespace WorkPartner
 
         #region UI 이벤트 핸들러
         private void Window_Loaded(object sender, RoutedEventArgs e) { RecalculateAllTotals(); RenderTimeTable(); }
-        private void DashboardPage_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e) { if (e.NewValue is true) LoadSettings(); }
+        private void DashboardPage_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e) { if (e.NewValue is true) { LoadSettings(); UpdateCoinDisplay(); } }
 
-        // --- [핵심 수정] 할 일 완료(체크) 시 코인을 지급하는 로직 ---
         private void SaveTodos_Event(object sender, RoutedEventArgs e)
         {
             if (sender is CheckBox checkBox && checkBox.DataContext is TodoItem todoItem)
             {
-                // IsCompleted 속성은 이미 바인딩에 의해 변경된 상태입니다.
-                // 완료되었고, 아직 보상을 받지 않았다면 코인을 지급합니다.
                 if (todoItem.IsCompleted && !todoItem.HasBeenRewarded)
                 {
-                    int coinsToAward = 10; // 할 일 하나당 10코인 지급
-                    _settings.Coins += coinsToAward;
+                    _settings.Coins += 10;
                     todoItem.HasBeenRewarded = true;
-
                     UpdateCoinDisplay();
-                    SaveSettings(); // 코인 변경 사항 저장
+                    SaveSettings();
                 }
             }
-            SaveTodos(); // 할 일 목록의 전체 상태 저장 (체크 여부 등)
+            SaveTodos();
         }
 
-        // ... 나머지 이벤트 핸들러들은 이전과 동일 ...
-        private void TaskListBox_SelectionChanged(object sender, SelectionChangedEventArgs e) { var selectedTask = TaskListBox.SelectedItem as TaskItem; if (_currentWorkingTask != selectedTask) { if (_stopwatch.IsRunning) { LogWorkSession(); _stopwatch.Reset(); } _currentWorkingTask = selectedTask; UpdateSelectedTaskTotalTimeDisplay(); if (_currentWorkingTask != null) CurrentTaskDisplay.Text = $"현재 과목: {_currentWorkingTask.Text}"; } }
+        private void RateSessionButton_Click(object sender, RoutedEventArgs e) { if (_lastUnratedSession != null && sender is Button button) { int score = int.Parse(button.Tag.ToString()); _lastUnratedSession.FocusScore = score; SaveTimeLogs(); SessionReviewPanel.Visibility = Visibility.Collapsed; _lastUnratedSession = null; } }
+        private void TaskListBox_SelectionChanged(object sender, SelectionChangedEventArgs e) { var selectedTask = TaskListBox.SelectedItem as TaskItem; if (_currentWorkingTask != selectedTask) { SessionReviewPanel.Visibility = Visibility.Collapsed; if (_stopwatch.IsRunning) { LogWorkSession(); _stopwatch.Reset(); } _currentWorkingTask = selectedTask; UpdateSelectedTaskTotalTimeDisplay(); if (_currentWorkingTask != null) CurrentTaskDisplay.Text = $"현재 과목: {_currentWorkingTask.Text}"; } }
         private void AddTaskButton_Click(object sender, RoutedEventArgs e) { if (!string.IsNullOrWhiteSpace(TaskInput.Text)) { TaskItems.Add(new TaskItem { Text = TaskInput.Text }); TaskInput.Clear(); SaveTasks(); } }
         private void TaskInput_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Enter) { AddTaskButton_Click(sender, e); } }
         private void DeleteTaskButton_Click(object sender, RoutedEventArgs e) { if (TaskListBox.SelectedItem is TaskItem selectedTask) { TaskItems.Remove(selectedTask); SaveTasks(); } }
@@ -124,21 +111,13 @@ namespace WorkPartner
         #endregion
 
         #region 핵심 로직
-        // [함수 추가] 코인 디스플레이를 업데이트합니다.
-        private void UpdateCoinDisplay()
-        {
-            if (_settings != null)
-            {
-                CoinDisplayTextBlock.Text = _settings.Coins.ToString();
-            }
-        }
-
-        private void UpdateTagSuggestions(TodoItem todo) { SuggestedTags.Clear(); if (todo == null) return; var suggestions = new List<string>(); if (_currentWorkingTask != null && !string.IsNullOrWhiteSpace(_currentWorkingTask.Text)) { suggestions.Add($"#{_currentWorkingTask.Text}"); } if (_settings != null && _settings.TagRules != null) { foreach (var rule in _settings.TagRules) { if (todo.Text.ToLower().Contains(rule.Key.ToLower())) { suggestions.Add(rule.Value); } } } foreach (var suggestion in suggestions.Distinct().Except(todo.Tags)) { SuggestedTags.Add(suggestion); } }
-        private void Timer_Tick(object sender, EventArgs e) { HandleStopwatchMode(); }
+        private void UpdateCoinDisplay() { if (_settings != null) { CoinDisplayTextBlock.Text = _settings.Coins.ToString("N0"); } }
+        private void LogWorkSession() { if (_currentWorkingTask == null || _stopwatch.Elapsed.TotalSeconds < 1) return; var entry = new TimeLogEntry { StartTime = _sessionStartTime, EndTime = _sessionStartTime.Add(_stopwatch.Elapsed), TaskText = _currentWorkingTask.Text, FocusScore = 0 }; TimeLogEntries.Insert(0, entry); SaveTimeLogs(); RecalculateAllTotals(); RenderTimeTable(); _lastUnratedSession = entry; SessionReviewPanel.Visibility = Visibility.Visible; }
+        private void Timer_Tick(object sender, EventArgs e) { if (_stopwatch.IsRunning && SessionReviewPanel.Visibility == Visibility.Visible) { SessionReviewPanel.Visibility = Visibility.Collapsed; _lastUnratedSession = null; } HandleStopwatchMode(); }
         private void HandleStopwatchMode() { string activeProcess = ActiveWindowHelper.GetActiveProcessName(); ActiveProcessDisplay.Text = $"활성 프로그램: {activeProcess}"; if (_settings.DistractionProcesses.Contains(activeProcess)) { if (_stopwatch.IsRunning) { LogWorkSession(); _stopwatch.Reset(); } _isPausedForDistraction = true; CurrentTaskDisplay.Text = "[딴짓 중!]"; ShowNagMessageIfNeeded(); } else { _isPausedForDistraction = false; bool isTrackable = _settings.WorkProcesses.Contains(activeProcess); bool isPassive = _settings.PassiveProcesses.Contains(activeProcess); if (isTrackable || isPassive) { bool isIdle = ActiveWindowHelper.GetIdleTime().TotalSeconds > _settings.IdleTimeoutSeconds; if (_settings.IsIdleDetectionEnabled && !isPassive && isIdle) { if (_stopwatch.IsRunning) { LogWorkSession(); _stopwatch.Reset(); } _isPausedForIdle = true; CurrentTaskDisplay.Text = $"[자리 비움] {_currentWorkingTask?.Text ?? ""}"; } else { _isPausedForIdle = false; if (!_stopwatch.IsRunning) { if (_currentWorkingTask == null && TaskItems.Any()) { TaskListBox.SelectedIndex = 0; } if (_currentWorkingTask != null) { _sessionStartTime = DateTime.Now; _stopwatch.Start(); } } CurrentTaskDisplay.Text = $"현재 과목: {_currentWorkingTask?.Text ?? "선택된 과목 없음"}"; } } else { if (_stopwatch.IsRunning) { LogWorkSession(); _stopwatch.Reset(); } CurrentTaskDisplay.Text = "선택된 과목 없음"; } } UpdateLiveTimeDisplays(); }
         private void ShowNagMessageIfNeeded() { TimeSpan nagInterval = TimeSpan.FromSeconds(_settings.FocusModeNagIntervalSeconds); if (_isFocusModeActive && (DateTime.Now - _lastNagTime) > nagInterval) { MessageBox.Show(Window.GetWindow(this), _settings.FocusModeNagMessage, "경고", MessageBoxButton.OK, MessageBoxImage.Warning); _lastNagTime = DateTime.Now; } }
         private void UpdateLiveTimeDisplays() { if (_stopwatch.IsRunning) { TimeSpan realTimeTotal = _totalTimeTodayFromLogs + _stopwatch.Elapsed; MainTimeDisplay.Text = realTimeTotal.ToString(@"hh\:mm\:ss"); if (_currentWorkingTask != null) { TimeSpan realTimeSelectedTaskTotal = _selectedTaskTotalTimeFromLogs + _stopwatch.Elapsed; SelectedTaskTotalTimeDisplay.Text = $"선택 과목 총계: {realTimeSelectedTaskTotal:hh\\:mm\\:ss}"; } } }
-        private void LogWorkSession() { if (_currentWorkingTask == null || _stopwatch.Elapsed.TotalSeconds < 1) return; var entry = new TimeLogEntry { StartTime = _sessionStartTime, EndTime = _sessionStartTime.Add(_stopwatch.Elapsed), TaskText = _currentWorkingTask.Text }; TimeLogEntries.Insert(0, entry); SaveTimeLogs(); RecalculateAllTotals(); RenderTimeTable(); }
+        private void UpdateTagSuggestions(TodoItem todo) { SuggestedTags.Clear(); if (todo == null) return; var suggestions = new List<string>(); if (_currentWorkingTask != null && !string.IsNullOrWhiteSpace(_currentWorkingTask.Text)) { suggestions.Add($"#{_currentWorkingTask.Text}"); } if (_settings != null && _settings.TagRules != null) { foreach (var rule in _settings.TagRules) { if (todo.Text.ToLower().Contains(rule.Key.ToLower())) { suggestions.Add(rule.Value); } } } foreach (var suggestion in suggestions.Distinct().Except(todo.Tags)) { SuggestedTags.Add(suggestion); } }
         private void UpdateSelectedTaskTotalTimeDisplay() { if (_currentWorkingTask != null) { var taskLogs = TimeLogEntries.Where(log => log.TaskText == _currentWorkingTask.Text && log.StartTime.Date == DateTime.Today.Date); _selectedTaskTotalTimeFromLogs = new TimeSpan(taskLogs.Sum(log => log.Duration.Ticks)); SelectedTaskTotalTimeDisplay.Text = $"선택 과목 총계: {_selectedTaskTotalTimeFromLogs:hh\\:mm\\:ss}"; } else { _selectedTaskTotalTimeFromLogs = TimeSpan.Zero; SelectedTaskTotalTimeDisplay.Text = "선택 과목 총계: 00:00:00"; } }
         private void RecalculateAllTotals() { var todayLogs = TimeLogEntries.Where(log => log.StartTime.Date == DateTime.Today.Date); _totalTimeTodayFromLogs = new TimeSpan(todayLogs.Sum(log => log.Duration.Ticks)); MainTimeDisplay.Text = _totalTimeTodayFromLogs.ToString(@"hh\:mm\:ss"); UpdateSelectedTaskTotalTimeDisplay(); }
         private void ResetStopwatchState() { _stopwatch.Reset(); _isPausedForIdle = false; _isPausedForDistraction = false; RecalculateAllTotals(); }
