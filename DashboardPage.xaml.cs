@@ -49,6 +49,7 @@ namespace WorkPartner
             InitializeTimer();
         }
 
+
         private void InitializeData()
         {
             TaskItems = new ObservableCollection<TaskItem>(); TaskListBox.ItemsSource = TaskItems;
@@ -59,8 +60,21 @@ namespace WorkPartner
 
         #region 데이터 저장 / 불러오기
         private void InitializeTimer() { _stopwatch = new Stopwatch(); _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) }; _timer.Tick += Timer_Tick; _timer.Start(); }
-        private void LoadAllData() { LoadSettings(); LoadTasks(); LoadTodos(); LoadTimeLogs(); UpdateCoinDisplay(); }
-        private void LoadSettings() { if (!File.Exists(_settingsFilePath)) { _settings = new AppSettings(); return; } var json = File.ReadAllText(_settingsFilePath); _settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings(); }
+        public void LoadAllData()
+        {
+            LoadSettings();
+            LoadTasks();
+            LoadTodos();
+            LoadTimeLogs();
+            UpdateCoinDisplay();
+        }
+        public void LoadSettings()
+        {
+            if (!File.Exists(_settingsFilePath)) { _settings = new AppSettings(); return; }
+            var json = File.ReadAllText(_settingsFilePath);
+            _settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+        }
+
         private void SaveSettings() { var options = new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }; var json = JsonSerializer.Serialize(_settings, options); File.WriteAllText(_settingsFilePath, json); }
         private void LoadTasks() { if (!File.Exists(_tasksFilePath)) return; var json = File.ReadAllText(_tasksFilePath); TaskItems = JsonSerializer.Deserialize<ObservableCollection<TaskItem>>(json) ?? new ObservableCollection<TaskItem>(); TaskListBox.ItemsSource = TaskItems; }
         private void SaveTasks() { var options = new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }; var json = JsonSerializer.Serialize(TaskItems, options); File.WriteAllText(_tasksFilePath, json); }

@@ -7,7 +7,6 @@
         mc:Ignorable="d"
         Title="작업 파트너" Height="740" Width="500">
     <DockPanel>
-        <!-- 상단 버튼 메뉴 -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="#F0F0F0" Height="40">
             <Button Content="대시보드" Width="100" Margin="5" Click="DashboardButton_Click"/>
             <Button Content="상점" Width="100" Margin="5" Click="ShopButton_Click"/>
@@ -15,7 +14,6 @@
             <Button Content="설정" Width="100" Margin="5" Click="SettingsButton_Click"/>
         </StackPanel>
 
-        <!-- 페이지 내용이 표시될 영역 -->
         <ContentControl x:Name="PageContent"/>
     </DockPanel>
 </Window>
