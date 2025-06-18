@@ -2,7 +2,6 @@
 
 namespace WorkPartner
 {
-    // [수정] 아이템의 종류를 커스터마이징 목록에 맞게 세분화합니다.
     public enum ItemType
     {
         // 얼굴 및 머리
@@ -28,7 +27,7 @@ namespace WorkPartner
         // 배경
         Cushion,
         CushionColor,
-        Background // 기존 상점 아이템과의 호환을 위해 유지
+        Background
     }
 
     public class ShopItem
@@ -38,9 +37,11 @@ namespace WorkPartner
         public int Price { get; set; }
         public ItemType Type { get; set; }
 
-        // 나중에 실제 이미지 파일 경로를 연결할 속성입니다.
-        // 예: "Images/Hair/style_01.png"
+        // 이미지 파일의 경로를 저장합니다.
         public string ImagePath { get; set; }
+
+        // [추가] 색상 아이템의 실제 색상 값(Hex 코드)을 저장합니다.
+        public string ColorValue { get; set; }
 
         public ShopItem()
         {

@@ -6,8 +6,9 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Media.Imaging; // BitmapImage 사용을 위해 추가
-using System.Windows.Shapes;       // Rectangle 사용을 위해 추가
+using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+using Xceed.Wpf.Toolkit; // ColorPicker 사용을 위해 추가
 
 namespace WorkPartner
 {
@@ -17,7 +18,6 @@ namespace WorkPartner
         private readonly string _itemsDbFilePath = "items_db.json";
         private AppSettings _settings;
         private List<ShopItem> _fullShopInventory;
-        private bool _isSliderUpdate = false;
 
         public ClosetPage()
         {
@@ -66,7 +66,10 @@ namespace WorkPartner
         {
             var categories = Enum.GetValues(typeof(ItemType)).Cast<ItemType>().ToList();
             CategoryListBox.ItemsSource = categories;
-            CategoryListBox.SelectedIndex = 0;
+            if (categories.Any())
+            {
+                CategoryListBox.SelectedIndex = 0;
+            }
         }
 
         private void CategoryListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -79,7 +82,7 @@ namespace WorkPartner
                 if (IsColorCategory(selectedType))
                 {
                     CustomColorPicker.Visibility = Visibility.Visible;
-                    LoadCustomColorToSliders(selectedType);
+                    LoadCustomColorToPicker(selectedType);
                 }
                 else
                 {
@@ -102,18 +105,47 @@ namespace WorkPartner
                     return;
                 }
 
-                if (_settings.EquippedItems.ContainsKey(clickedItem.Type) && _settings.EquippedItems[clickedItem.Type] == itemId)
+                // 색상 아이템이 아닌 경우에만 착용/해제 로직 실행
+                if (!IsColorCategory(clickedItem.Type))
                 {
-                    _settings.EquippedItems.Remove(clickedItem.Type);
-                }
-                else
-                {
-                    _settings.EquippedItems[clickedItem.Type] = itemId;
+                    if (_settings.EquippedItems.ContainsKey(clickedItem.Type) && _settings.EquippedItems[clickedItem.Type] == itemId)
+                    {
+                        _settings.EquippedItems.Remove(clickedItem.Type);
+                    }
+                    else
+                    {
+                        _settings.EquippedItems[clickedItem.Type] = itemId;
+                    }
                 }
 
                 SaveSettings();
                 UpdateCharacterPreview();
                 UpdateItemButtonsState();
+            }
+        }
+
+        private void MyColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e)
+        {
+            if (CategoryListBox.SelectedItem is ItemType selectedType && MyColorPicker.SelectedColor.HasValue)
+            {
+                if (!IsColorCategory(selectedType)) return;
+
+                _settings.CustomColors[selectedType] = MyColorPicker.SelectedColor.Value.ToString();
+                SaveSettings();
+                UpdateCharacterPreview();
+            }
+        }
+
+        private void LoadCustomColorToPicker(ItemType type)
+        {
+            if (_settings.CustomColors.ContainsKey(type))
+            {
+                var color = (Color)ColorConverter.ConvertFromString(_settings.CustomColors[type]);
+                MyColorPicker.SelectedColor = color;
+            }
+            else
+            {
+                MyColorPicker.SelectedColor = Colors.White;
             }
         }
 
@@ -129,8 +161,10 @@ namespace WorkPartner
                     if (button == null || !(button.Tag is Guid itemId)) continue;
                     var shopItem = _fullShopInventory.FirstOrDefault(i => i.Id == itemId);
                     if (shopItem == null) continue;
+
                     bool isOwned = _settings.OwnedItemIds.Contains(itemId) || shopItem.Price == 0;
-                    bool isEquipped = _settings.EquippedItems.ContainsKey(shopItem.Type) && _settings.EquippedItems[shopItem.Type] == itemId;
+                    bool isEquipped = !IsColorCategory(shopItem.Type) && _settings.EquippedItems.ContainsKey(shopItem.Type) && _settings.EquippedItems[shopItem.Type] == itemId;
+
                     if (isEquipped)
                     {
                         button.BorderBrush = Brushes.Gold;
@@ -155,9 +189,8 @@ namespace WorkPartner
                 .OrderBy(item => GetZIndex(item.Type));
 
             ShopItem hairStyleItem = sortedEquippedItems.FirstOrDefault(i => i.Type == ItemType.HairStyle);
-            ShopItem hairColorItem = sortedEquippedItems.FirstOrDefault(i => i.Type == ItemType.HairColor);
 
-            foreach (var item in sortedEquippedItems.Where(i => i.Type != ItemType.HairStyle && i.Type != ItemType.HairColor))
+            foreach (var item in sortedEquippedItems.Where(i => i.Type != ItemType.HairStyle))
             {
                 var partElement = CreateItemVisual(item);
                 Panel.SetZIndex(partElement, GetZIndex(item.Type));
@@ -166,26 +199,17 @@ namespace WorkPartner
 
             if (hairStyleItem != null)
             {
-                var hairImage = new Image
-                {
-                    Source = new BitmapImage(new Uri(hairStyleItem.ImagePath, UriKind.RelativeOrAbsolute)),
-                    Width = 100,
-                    Height = 100,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    HorizontalAlignment = HorizontalAlignment.Center
-                };
+                var hairImage = CreateItemVisual(hairStyleItem) as Image;
+                if (hairImage == null) return;
+
                 var tintEffect = new TintColorEffect();
                 if (_settings.CustomColors.ContainsKey(ItemType.HairColor))
                 {
                     tintEffect.TintColor = (Color)ColorConverter.ConvertFromString(_settings.CustomColors[ItemType.HairColor]);
                 }
-                else if (hairColorItem != null && !string.IsNullOrEmpty(hairColorItem.ColorValue))
-                {
-                    tintEffect.TintColor = (Color)ColorConverter.ConvertFromString(hairColorItem.ColorValue);
-                }
                 else
                 {
-                    tintEffect.TintColor = Colors.White;
+                    tintEffect.TintColor = Colors.White; // 기본 색상 (회색조 그대로)
                 }
                 hairImage.Effect = tintEffect;
                 Panel.SetZIndex(hairImage, GetZIndex(ItemType.HairStyle));
@@ -195,30 +219,36 @@ namespace WorkPartner
 
         private FrameworkElement CreateItemVisual(ShopItem item)
         {
-            if (string.IsNullOrEmpty(item.ImagePath) && !string.IsNullOrEmpty(item.ColorValue))
+            // 색상 값만 있는 아이템은 시각적 표현이 없으므로 null 반환
+            if (string.IsNullOrEmpty(item.ImagePath)) return null;
+
+            // 이미지 경로가 있는 경우 Image 컨트롤 생성
+            try
             {
-                // 색상 값만 있는 경우 (눈 색, 옷 색 등)
-                return new Rectangle
-                {
-                    Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString(item.ColorValue)),
-                    Width = 100,
-                    Height = 100,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    HorizontalAlignment = HorizontalAlignment.Center
-                };
-            }
-            else
-            {
-                // 이미지 경로가 있는 경우
                 return new Image
                 {
                     Source = new BitmapImage(new Uri(item.ImagePath, UriKind.RelativeOrAbsolute)),
-                    Width = 100,
-                    Height = 100,
+                    Width = 150,
+                    Height = 150, // 크기 조정
                     VerticalAlignment = VerticalAlignment.Center,
-                    HorizontalAlignment = HorizontalAlignment.Center
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Stretch = Stretch.Uniform
                 };
             }
+            catch (Exception ex)
+            {
+                // 이미지 로드 실패 시 오류 메시지 표시
+                System.Diagnostics.Debug.WriteLine($"이미지 로드 실패: {item.ImagePath}, 오류: {ex.Message}");
+                return new TextBlock { Text = "이미지 오류", Foreground = Brushes.Red };
+            }
+        }
+
+        private bool IsColorCategory(ItemType type)
+        {
+            return type == ItemType.HairColor ||
+                   type == ItemType.EyeColor ||
+                   type == ItemType.ClothesColor ||
+                   type == ItemType.CushionColor;
         }
 
         private int GetZIndex(ItemType type)
@@ -232,54 +262,18 @@ namespace WorkPartner
                 case ItemType.ClothesColor: return 11;
                 case ItemType.AnimalTail: return 12;
                 case ItemType.HairStyle: return 20;
-                case ItemType.HairColor: return 21;
-                case ItemType.AnimalEar: return 22;
                 case ItemType.EyeShape: return 23;
-                case ItemType.EyeColor: return 24;
                 case ItemType.MouthShape: return 25;
                 case ItemType.FaceDeco1: return 30;
                 case ItemType.FaceDeco2: return 31;
                 case ItemType.FaceDeco3: return 32;
                 case ItemType.FaceDeco4: return 33;
-                case ItemType.Accessory1: return 40;
-                case ItemType.Accessory2: return 41;
-                case ItemType.Accessory3: return 42;
+                case ItemType.AnimalEar: return 40; // 머리보다 위에 오도록 수정
+                case ItemType.Accessory1: return 41;
+                case ItemType.Accessory2: return 42;
+                case ItemType.Accessory3: return 43;
                 default: return 5;
             }
-        }
-
-        private void ColorSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        {
-            if (_isSliderUpdate || !(CategoryListBox.SelectedItem is ItemType selectedType)) return;
-            if (!IsColorCategory(selectedType)) return;
-            Color newColor = Color.FromRgb((byte)SliderR.Value, (byte)SliderG.Value, (byte)SliderB.Value);
-            _settings.CustomColors[selectedType] = newColor.ToString();
-            SaveSettings();
-            UpdateCharacterPreview();
-        }
-
-        private void LoadCustomColorToSliders(ItemType type)
-        {
-            _isSliderUpdate = true;
-            if (_settings.CustomColors.ContainsKey(type))
-            {
-                var color = (Color)ColorConverter.ConvertFromString(_settings.CustomColors[type]);
-                SliderR.Value = color.R;
-                SliderG.Value = color.G;
-                SliderB.Value = color.B;
-            }
-            else
-            {
-                SliderR.Value = 255;
-                SliderG.Value = 255;
-                SliderB.Value = 255;
-            }
-            _isSliderUpdate = false;
-        }
-
-        private bool IsColorCategory(ItemType type)
-        {
-            return type == ItemType.HairColor || type == ItemType.EyeColor || type == ItemType.ClothesColor || type == ItemType.CushionColor;
         }
 
         public static T FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
