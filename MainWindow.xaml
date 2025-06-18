@@ -8,10 +8,11 @@
         Title="작업 파트너" Height="740" Width="500">
     <DockPanel>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="#F0F0F0" Height="40">
-            <Button Content="대시보드" Width="100" Margin="5" Click="DashboardButton_Click"/>
-            <Button Content="상점" Width="100" Margin="5" Click="ShopButton_Click"/>
-            <Button Content="분석" Width="100" Margin="5" Click="AnalysisButton_Click"/>
-            <Button Content="설정" Width="100" Margin="5" Click="SettingsButton_Click"/>
+            <Button Content="대시보드" Width="80" Margin="5" Click="DashboardButton_Click"/>
+            <Button Content="상점" Width="80" Margin="5" Click="ShopButton_Click"/>
+            <Button Content="옷장" Width="80" Margin="5" x:Name="ClosetButton" Click="ClosetButton_Click"/>
+            <Button Content="분석" Width="80" Margin="5" Click="AnalysisButton_Click"/>
+            <Button Content="설정" Width="80" Margin="5" Click="SettingsButton_Click"/>
         </StackPanel>
 
         <ContentControl x:Name="PageContent"/>

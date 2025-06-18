@@ -1,0 +1,73 @@
+﻿<!-- ClosetPage.xaml -->
+<UserControl x:Class="WorkPartner.ClosetPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             mc:Ignorable="d" d:DesignHeight="450" d:DesignWidth="800"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="clr-namespace:WorkPartner">
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="2*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" BorderBrush="LightGray" BorderThickness="1" CornerRadius="5">
+            <Grid x:Name="CharacterPreviewGrid">
+                <TextBlock Text="캐릭터 미리보기" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Column="1" Margin="10,0,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <!-- [추가] 커스텀 색상 UI를 위한 공간 -->
+            </Grid.RowDefinitions>
+
+            <ListBox x:Name="CategoryListBox" Grid.Row="0" Margin="0,0,0,5" SelectionChanged="CategoryListBox_SelectionChanged">
+                <!-- ... (기존 ListBox 내용은 그대로) -->
+            </ListBox>
+
+            <ScrollViewer Grid.Row="1">
+                <ItemsControl x:Name="ItemsListView">
+                    <!-- ... (기존 ItemsControl 내용은 그대로) -->
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- [추가] 나만의 색상 만들기 UI -->
+            <Border x:Name="CustomColorPicker" Grid.Row="2" Margin="0,10,0,0" Padding="10" 
+                    BorderBrush="Gainsboro" BorderThickness="1" CornerRadius="5"
+                    Visibility="Collapsed">
+                <!-- 처음에는 숨겨둡니다. -->
+                <StackPanel>
+                    <TextBlock Text="나만의 색상 만들기" FontWeight="Bold" Margin="0,0,0,5"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="R:" VerticalAlignment="Center" Foreground="Red"/>
+                        <Slider x:Name="SliderR" Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="255" ValueChanged="ColorSlider_ValueChanged" Margin="5,0"/>
+                        <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Value, ElementName=SliderR, StringFormat={}{0:0}}" VerticalAlignment="Center"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="G:" VerticalAlignment="Center" Foreground="Green"/>
+                        <Slider x:Name="SliderG" Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="255" ValueChanged="ColorSlider_ValueChanged" Margin="5,0"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Value, ElementName=SliderG, StringFormat={}{0:0}}" VerticalAlignment="Center"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="B:" VerticalAlignment="Center" Foreground="Blue"/>
+                        <Slider x:Name="SliderB" Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="255" ValueChanged="ColorSlider_ValueChanged" Margin="5,0"/>
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Value, ElementName=SliderB, StringFormat={}{0:0}}" VerticalAlignment="Center"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

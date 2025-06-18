@@ -12,6 +12,8 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using WorkPartner.AI;
+using System.Windows;
+
 
 namespace WorkPartner
 {
@@ -44,6 +46,7 @@ namespace WorkPartner
         private MediaPlayer _bgmPlayer;
         private bool _isBgmPlaying = false;
         private DateTime _lastSuggestionTime;
+
         #endregion
 
         public DashboardPage()

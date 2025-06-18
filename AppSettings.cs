@@ -20,9 +20,13 @@ namespace WorkPartner
         public List<Guid> OwnedItemIds { get; set; }
 
         //어떤 아이템을 착용했는지
-        public Guid? EquippedHatId { get; set; }
-        public Guid? EquippedClothesId { get; set; }
-        public Guid? EquippedBackgroundId { get; set; }
+        public Dictionary<ItemType, Guid> EquippedItems { get; set; }
+
+        // [추가] 사용자가 직접 만든 커스텀 색상을 부위별로 저장하는 Dictionary 입니다.
+        // 예를 들어, Key는 ItemType.HairColor, Value는 색상 Hex 코드("#RRGGBB")가 됩니다.
+        public Dictionary<ItemType, string> CustomColors { get; set; }
+
+
 
         public AppSettings()
         {
@@ -38,9 +42,12 @@ namespace WorkPartner
             OwnedItemIds = new List<Guid>();
 
             // [추가] 착용 아이템 ID 초기화
-            EquippedHatId = null;
-            EquippedClothesId = null;
-            EquippedBackgroundId = null;
+            EquippedItems = new Dictionary<ItemType, Guid>();
+
+            // [추가] 커스텀 색상 Dictionary 초기화
+            CustomColors = new Dictionary<ItemType, string>();
+
+
         }
     }
 }

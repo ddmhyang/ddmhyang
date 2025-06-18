@@ -8,6 +8,7 @@ namespace WorkPartner
         private SettingsPage _settingsPage;
         private AnalysisPage _analysisPage;
         private ShopPage _shopPage;
+        private ClosetPage _closetPage; // [추가] 옷장 페이지 변수
 
         public MainWindow()
         {
@@ -16,6 +17,7 @@ namespace WorkPartner
             _settingsPage = new SettingsPage();
             _analysisPage = new AnalysisPage();
             _shopPage = new ShopPage();
+            _closetPage = new ClosetPage(); // [추가] 옷장 페이지 초기화
             PageContent.Content = _dashboardPage;
         }
 
@@ -43,6 +45,11 @@ namespace WorkPartner
             PageContent.Content = _shopPage;
         }
 
+        private void ClosetButton_Click(object sender, RoutedEventArgs e)
+        {
+            _closetPage.LoadData(); // 페이지를 보여주기 전에 최신 데이터를 불러옵니다.
+            PageContent.Content = _closetPage;
+        }
 
     }
 }
