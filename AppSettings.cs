@@ -19,9 +19,13 @@ namespace WorkPartner
         // [속성 추가] 사용자가 구매한 아이템의 ID를 저장할 목록입니다.
         public List<Guid> OwnedItemIds { get; set; }
 
+        //어떤 아이템을 착용했는지
+        public Guid? EquippedHatId { get; set; }
+        public Guid? EquippedClothesId { get; set; }
+        public Guid? EquippedBackgroundId { get; set; }
+
         public AppSettings()
         {
-            // ... 기존 기본값 설정 ...
             IsIdleDetectionEnabled = true;
             IdleTimeoutSeconds = 60;
             WorkProcesses = new ObservableCollection<string>();
@@ -31,9 +35,12 @@ namespace WorkPartner
             FocusModeNagIntervalSeconds = 30;
             TagRules = new Dictionary<string, string>();
             Coins = 0;
-
-            // 소지품 목록 초기화
             OwnedItemIds = new List<Guid>();
+
+            // [추가] 착용 아이템 ID 초기화
+            EquippedHatId = null;
+            EquippedClothesId = null;
+            EquippedBackgroundId = null;
         }
     }
 }

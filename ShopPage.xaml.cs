@@ -64,14 +64,15 @@ namespace WorkPartner
                     MessageBox.Show("이미 보유하고 있는 아이템입니다.", "알림", MessageBoxButton.OK, MessageBoxImage.Information);
                     return;
                 }
-
                 if (_settings.Coins >= itemToBuy.Price)
                 {
+                    // [수정] 비어있던 MessageBox.Show()의 인수를 채워넣었습니다.
                     if (MessageBox.Show($"{itemToBuy.Name} 아이템을 {itemToBuy.Price} 코인으로 구매하시겠습니까?", "구매 확인", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                     {
                         _settings.Coins -= itemToBuy.Price;
                         _settings.OwnedItemIds.Add(itemId);
                         SaveSettings();
+                        SoundPlayer.PlayPurchaseSound(); // 구매 성공 효과음!
                         MessageBox.Show("구매가 완료되었습니다!", "성공", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                 }

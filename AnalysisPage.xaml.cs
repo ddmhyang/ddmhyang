@@ -91,7 +91,18 @@ namespace WorkPartner
             };
 
             float predictedScore = _predictionService.Predict(input);
+            string suggestion = GetSuggestionForScore(predictedScore); // [추가] 점수에 따른 해석 함수 호출
+
             PredictionResultTextBlock.Text = $"예상 집중도: {predictedScore:F2} / 5.0";
+        }
+
+        // [함수 추가] 점수를 해석해주는 도우미 함수
+        private string GetSuggestionForScore(float score)
+        {
+            if (score >= 4.0) return "AI 분석: 최고의 집중력을 발휘할 수 있는 '황금 시간대'입니다!";
+            if (score >= 3.0) return "AI 분석: 좋은 컨디션으로 꾸준히 작업을 이어갈 수 있겠네요.";
+            if (score > 0) return "AI 분석: 집중력이 다소 떨어질 수 있으니, 중간에 짧은 휴식을 권장합니다.";
+            return "분석에 필요한 데이터가 부족하거나, 이전에 학습한 적이 없는 조건입니다.";
         }
 
         // --- 이하 다른 코드들은 이전과 동일 ---

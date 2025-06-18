@@ -180,6 +180,7 @@
     <Compile Include="ShopPage.xaml.cs">
       <DependentUpon>ShopPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="SoundPlayer.cs" />
     <Compile Include="TaskItem.cs" />
     <Compile Include="TimeLogEntry.cs" />
     <Compile Include="TimerMode.cs" />

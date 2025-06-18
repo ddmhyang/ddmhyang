@@ -42,5 +42,7 @@ namespace WorkPartner
             _shopPage.LoadSettings(); // 상점 페이지를 보여주기 전에 최신 설정(코인 정보)을 불러옵니다.
             PageContent.Content = _shopPage;
         }
+
+
     }
 }
