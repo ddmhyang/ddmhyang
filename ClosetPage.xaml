@@ -15,9 +15,7 @@
 
         <!-- 캐릭터 미리보기 영역 -->
         <Border Grid.Column="0" BorderBrush="LightGray" BorderThickness="1" CornerRadius="5">
-            <Grid x:Name="CharacterPreviewGrid">
-                <TextBlock Text="캐릭터 미리보기" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
-            </Grid>
+            <local:CharacterDisplay x:Name="CharacterPreviewControl"/>
         </Border>
 
         <!-- 아이템 선택 영역 -->

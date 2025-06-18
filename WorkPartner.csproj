@@ -182,6 +182,9 @@
       <DependentUpon>AnalysisPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="AppSettings.cs" />
+    <Compile Include="CharacterDisplay.xaml.cs">
+      <DependentUpon>CharacterDisplay.xaml</DependentUpon>
+    </Compile>
     <Compile Include="ClosetPage.xaml.cs">
       <DependentUpon>ClosetPage.xaml</DependentUpon>
     </Compile>
@@ -210,6 +213,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="AnalysisPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="CharacterDisplay.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

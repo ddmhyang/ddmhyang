@@ -15,9 +15,18 @@
         </Grid.RowDefinitions>
 
         <!-- 상단 타이머 -->
-        <StackPanel Grid.Row="0">
-            <TextBlock x:Name="MainTimeDisplay" FontSize="48" Text="00:00:00" Margin="10" HorizontalAlignment="Center"/>
-        </StackPanel>
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock x:Name="MainTimeDisplay" FontSize="48" Text="00:00:00" Margin="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+            <Border Grid.Column="1" Width="150" Height="150" BorderBrush="Gainsboro" BorderThickness="1" CornerRadius="5" Margin="10">
+                <local:CharacterDisplay x:Name="DashboardCharacterDisplay"/>
+            </Border>
+        </Grid>
 
         <!-- 제어판 및 정보 패널 -->
         <StackPanel Grid.Row="1">

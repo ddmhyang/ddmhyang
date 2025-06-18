@@ -82,7 +82,19 @@ namespace WorkPartner
 
         #region UI 이벤트 핸들러
         private void Window_Loaded(object sender, RoutedEventArgs e) { RecalculateAllTotals(); RenderTimeTable(); }
-        private void DashboardPage_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e) { if (e.NewValue is true) { LoadSettings(); UpdateCoinDisplay(); } }
+
+        private void DashboardPage_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (e.NewValue is true)
+            {
+                LoadSettings();
+                UpdateCoinDisplay();
+
+                // [추가] 대시보드의 캐릭터 표시 컨트롤을 업데이트합니다.
+                DashboardCharacterDisplay.UpdateCharacter();
+            }
+        }
+
         private void RateSessionButton_Click(object sender, RoutedEventArgs e) { if (_lastUnratedSession != null && sender is Button button) { int score = int.Parse(button.Tag.ToString()); _lastUnratedSession.FocusScore = score; SaveTimeLogs(); SessionReviewPanel.Visibility = Visibility.Collapsed; _lastUnratedSession = null; } }
         private void SaveTodos_Event(object sender, RoutedEventArgs e) { if (sender is CheckBox checkBox && checkBox.DataContext is TodoItem todoItem) { if (todoItem.IsCompleted && !todoItem.HasBeenRewarded) { _settings.Coins += 10; todoItem.HasBeenRewarded = true; UpdateCoinDisplay(); SaveSettings(); SoundPlayer.PlayCompleteSound(); } } SaveTodos(); }
         private void TaskListBox_SelectionChanged(object sender, SelectionChangedEventArgs e) { var selectedTask = TaskListBox.SelectedItem as TaskItem; if (_currentWorkingTask != selectedTask) { SessionReviewPanel.Visibility = Visibility.Collapsed; if (_stopwatch.IsRunning) { LogWorkSession(); _stopwatch.Reset(); } _currentWorkingTask = selectedTask; UpdateSelectedTaskTotalTimeDisplay(); if (_currentWorkingTask != null) CurrentTaskDisplay.Text = $"현재 과목: {_currentWorkingTask.Text}"; } }

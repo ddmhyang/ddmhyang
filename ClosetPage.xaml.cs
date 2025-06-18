@@ -8,7 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-using Xceed.Wpf.Toolkit; // ColorPicker 사용을 위해 추가
+using Xceed.Wpf.Toolkit;
 
 namespace WorkPartner
 {
@@ -57,8 +57,9 @@ namespace WorkPartner
             }
             else
             {
+                // [수정] 어떤 MessageBox를 사용할지 명확히 지정합니다. (System.Windows.MessageBox)
+                System.Windows.MessageBox.Show("아이템 데이터베이스 파일(items_db.json)을 찾을 수 없습니다.", "오류");
                 _fullShopInventory = new List<ShopItem>();
-                MessageBox.Show("아이템 데이터베이스 파일(items_db.json)을 찾을 수 없습니다.", "오류");
             }
         }
 
@@ -101,11 +102,11 @@ namespace WorkPartner
 
                 if (!_settings.OwnedItemIds.Contains(itemId) && clickedItem.Price > 0)
                 {
-                    MessageBox.Show("아직 보유하지 않은 아이템입니다. 상점에서 먼저 구매해주세요!", "알림");
+                    // [수정] 어떤 MessageBox를 사용할지 명확히 지정합니다. (System.Windows.MessageBox)
+                    System.Windows.MessageBox.Show("아직 보유하지 않은 아이템입니다. 상점에서 먼저 구매해주세요!", "알림");
                     return;
                 }
 
-                // 색상 아이템이 아닌 경우에만 착용/해제 로직 실행
                 if (!IsColorCategory(clickedItem.Type))
                 {
                     if (_settings.EquippedItems.ContainsKey(clickedItem.Type) && _settings.EquippedItems[clickedItem.Type] == itemId)
@@ -129,7 +130,6 @@ namespace WorkPartner
             if (CategoryListBox.SelectedItem is ItemType selectedType && MyColorPicker.SelectedColor.HasValue)
             {
                 if (!IsColorCategory(selectedType)) return;
-
                 _settings.CustomColors[selectedType] = MyColorPicker.SelectedColor.Value.ToString();
                 SaveSettings();
                 UpdateCharacterPreview();
@@ -161,7 +161,6 @@ namespace WorkPartner
                     if (button == null || !(button.Tag is Guid itemId)) continue;
                     var shopItem = _fullShopInventory.FirstOrDefault(i => i.Id == itemId);
                     if (shopItem == null) continue;
-
                     bool isOwned = _settings.OwnedItemIds.Contains(itemId) || shopItem.Price == 0;
                     bool isEquipped = !IsColorCategory(shopItem.Type) && _settings.EquippedItems.ContainsKey(shopItem.Type) && _settings.EquippedItems[shopItem.Type] == itemId;
 
@@ -180,69 +179,6 @@ namespace WorkPartner
             }), System.Windows.Threading.DispatcherPriority.ContextIdle);
         }
 
-        private void UpdateCharacterPreview()
-        {
-            CharacterPreviewGrid.Children.Clear();
-            var sortedEquippedItems = _settings.EquippedItems
-                .Select(pair => _fullShopInventory.FirstOrDefault(i => i.Id == pair.Value))
-                .Where(item => item != null)
-                .OrderBy(item => GetZIndex(item.Type));
-
-            ShopItem hairStyleItem = sortedEquippedItems.FirstOrDefault(i => i.Type == ItemType.HairStyle);
-
-            foreach (var item in sortedEquippedItems.Where(i => i.Type != ItemType.HairStyle))
-            {
-                var partElement = CreateItemVisual(item);
-                Panel.SetZIndex(partElement, GetZIndex(item.Type));
-                CharacterPreviewGrid.Children.Add(partElement);
-            }
-
-            if (hairStyleItem != null)
-            {
-                var hairImage = CreateItemVisual(hairStyleItem) as Image;
-                if (hairImage == null) return;
-
-                var tintEffect = new TintColorEffect();
-                if (_settings.CustomColors.ContainsKey(ItemType.HairColor))
-                {
-                    tintEffect.TintColor = (Color)ColorConverter.ConvertFromString(_settings.CustomColors[ItemType.HairColor]);
-                }
-                else
-                {
-                    tintEffect.TintColor = Colors.White; // 기본 색상 (회색조 그대로)
-                }
-                hairImage.Effect = tintEffect;
-                Panel.SetZIndex(hairImage, GetZIndex(ItemType.HairStyle));
-                CharacterPreviewGrid.Children.Add(hairImage);
-            }
-        }
-
-        private FrameworkElement CreateItemVisual(ShopItem item)
-        {
-            // 색상 값만 있는 아이템은 시각적 표현이 없으므로 null 반환
-            if (string.IsNullOrEmpty(item.ImagePath)) return null;
-
-            // 이미지 경로가 있는 경우 Image 컨트롤 생성
-            try
-            {
-                return new Image
-                {
-                    Source = new BitmapImage(new Uri(item.ImagePath, UriKind.RelativeOrAbsolute)),
-                    Width = 150,
-                    Height = 150, // 크기 조정
-                    VerticalAlignment = VerticalAlignment.Center,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Stretch = Stretch.Uniform
-                };
-            }
-            catch (Exception ex)
-            {
-                // 이미지 로드 실패 시 오류 메시지 표시
-                System.Diagnostics.Debug.WriteLine($"이미지 로드 실패: {item.ImagePath}, 오류: {ex.Message}");
-                return new TextBlock { Text = "이미지 오류", Foreground = Brushes.Red };
-            }
-        }
-
         private bool IsColorCategory(ItemType type)
         {
             return type == ItemType.HairColor ||
@@ -251,29 +187,10 @@ namespace WorkPartner
                    type == ItemType.CushionColor;
         }
 
-        private int GetZIndex(ItemType type)
+        private void UpdateCharacterPreview()
         {
-            switch (type)
-            {
-                case ItemType.Background: return 0;
-                case ItemType.Cushion: return 1;
-                case ItemType.CushionColor: return 2;
-                case ItemType.Clothes: return 10;
-                case ItemType.ClothesColor: return 11;
-                case ItemType.AnimalTail: return 12;
-                case ItemType.HairStyle: return 20;
-                case ItemType.EyeShape: return 23;
-                case ItemType.MouthShape: return 25;
-                case ItemType.FaceDeco1: return 30;
-                case ItemType.FaceDeco2: return 31;
-                case ItemType.FaceDeco3: return 32;
-                case ItemType.FaceDeco4: return 33;
-                case ItemType.AnimalEar: return 40; // 머리보다 위에 오도록 수정
-                case ItemType.Accessory1: return 41;
-                case ItemType.Accessory2: return 42;
-                case ItemType.Accessory3: return 43;
-                default: return 5;
-            }
+            // UserControl의 public 메서드를 호출하여 캐릭터를 새로고침합니다.
+            CharacterPreviewControl.UpdateCharacter();
         }
 
         public static T FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
