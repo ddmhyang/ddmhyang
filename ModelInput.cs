@@ -1,13 +1,29 @@
-﻿using Microsoft.ML.Data;
+﻿// 파일: ModelInput.cs (수정)
+// [수정] TimeLogEntry와 동일한 구조를 가지도록 하고, 학습에 사용하지 않을 속성에 [Ignore]를 추가합니다.
+using Microsoft.ML.Data;
+using System;
+using System.Collections.Generic;
 
 namespace WorkPartner.AI
 {
     public class ModelInput
     {
-        [LoadColumn(0)] public float DayOfWeek { get; set; } // 요일 (숫자로 변환)
-        [LoadColumn(1)] public float Hour { get; set; }      // 시간
-        [LoadColumn(2)] public float Duration { get; set; }  // 작업 시간
-        [LoadColumn(3)] public string TaskName { get; set; } // 과목 이름
-        [LoadColumn(4), ColumnName("Label")] public float FocusScore { get; set; } // 정답(집중도 점수)
+        // 학습에 사용할 특성(Feature)들
+        public float DayOfWeek { get; set; }
+        public float Hour { get; set; }
+        public float Duration { get; set; }
+        public string TaskName { get; set; }
+
+        // 예측할 값(Label)
+        [ColumnName("Label")]
+        public float FocusScore { get; set; }
+
+        // 학습에 사용하지 않을 속성들은 [Ignore] 처리합니다.
+        [Ignore]
+        public DateTime StartTime { get; set; }
+        [Ignore]
+        public DateTime EndTime { get; set; }
+        [Ignore]
+        public List<string> BreakActivities { get; set; }
     }
 }
