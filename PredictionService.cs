@@ -1,6 +1,5 @@
 ﻿// 파일: PredictionService.cs (수정)
-// [수정] MessageBox를 사용하기 위해 'System.Windows' 네임스페이스를 추가했습니다.
-// [수정] 학습 데이터를 ModelInput 형태로 변환하는 과정을 추가합니다.
+// [수정] 학습 데이터를 TimeLogEntry에서 ModelInput 형태로 변환하여 사용하는 로직으로 변경했습니다.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -35,7 +34,7 @@ namespace WorkPartner.AI
 
                 var allLogs = JsonSerializer.Deserialize<List<TimeLogEntry>>(json);
 
-                // [수정] TimeLogEntry 리스트를 ModelInput 리스트로 변환합니다.
+                // [핵심 수정] TimeLogEntry 리스트를 AI 학습용 ModelInput 리스트로 변환합니다.
                 var modelInputData = allLogs
                     .Where(log => log.FocusScore > 0)
                     .Select(log => new ModelInput
@@ -49,10 +48,9 @@ namespace WorkPartner.AI
 
                 if (modelInputData.Count < 10) return;
 
-                // [수정] 변환된 modelInputData를 사용하여 DataView를 생성합니다.
+                // 변환된 데이터를 사용하여 DataView를 생성합니다.
                 var dataView = _mlContext.Data.LoadFromEnumerable(modelInputData);
 
-                // [수정] 파이프라인에서 더 이상 FocusScore를 복사할 필요가 없습니다.
                 var pipeline = _mlContext.Transforms.Categorical.OneHotEncoding(outputColumnName: "TaskNameEncoded", inputColumnName: "TaskName")
                     .Append(_mlContext.Transforms.Concatenate("Features", "DayOfWeek", "Hour", "Duration", "TaskNameEncoded"))
                     .Append(_mlContext.Regression.Trainers.FastTree());

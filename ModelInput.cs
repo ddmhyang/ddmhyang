@@ -1,8 +1,6 @@
 ﻿// 파일: ModelInput.cs (수정)
-// [수정] TimeLogEntry와 동일한 구조를 가지도록 하고, 학습에 사용하지 않을 속성에 [Ignore]를 추가합니다.
+// [수정] AI 학습에 필요한 속성만 남겨 구조를 단순화하고, [Ignore] 어트리뷰트를 모두 제거했습니다.
 using Microsoft.ML.Data;
-using System;
-using System.Collections.Generic;
 
 namespace WorkPartner.AI
 {
@@ -17,13 +15,5 @@ namespace WorkPartner.AI
         // 예측할 값(Label)
         [ColumnName("Label")]
         public float FocusScore { get; set; }
-
-        // 학습에 사용하지 않을 속성들은 [Ignore] 처리합니다.
-        [Ignore]
-        public DateTime StartTime { get; set; }
-        [Ignore]
-        public DateTime EndTime { get; set; }
-        [Ignore]
-        public List<string> BreakActivities { get; set; }
     }
 }
