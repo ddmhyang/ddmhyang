@@ -8,6 +8,8 @@ using System.Text.Json;
 using Microsoft.ML;
 // [수정] FastTree 알고리즘을 사용하기 위해 네임스페이스를 추가합니다.
 using Microsoft.ML.Trainers.FastTree;
+using System.Windows; // [오류 수정] MessageBox를 사용하기 위해 추가
+
 
 namespace WorkPartner.AI
 {
@@ -26,37 +28,46 @@ namespace WorkPartner.AI
         // 1. 모델 훈련
         public void TrainModel()
         {
-            if (!File.Exists(_timeLogFilePath)) return;
-
-            var json = File.ReadAllText(_timeLogFilePath);
-            var allLogs = JsonSerializer.Deserialize<List<TimeLogEntry>>(json);
-
-            var trainingData = allLogs
-                .Where(log => log.FocusScore > 0)
-                .Select(log => new ModelInput
+            try // <--- 여기부터 위기 상황에 대비 시작!
+            {
+                if (!File.Exists(_timeLogFilePath))
                 {
-                    DayOfWeek = (float)log.StartTime.DayOfWeek,
-                    Hour = (float)log.StartTime.Hour,
-                    Duration = (float)log.Duration.TotalMinutes,
-                    TaskName = log.TaskText,
-                    FocusScore = log.FocusScore
-                }).ToList();
+                    // 파일이 없으면 훈련을 시도조차 하지 않고 조용히 종료합니다.
+                    return;
+                }
 
-            if (trainingData.Count < 10) return;
+                var json = File.ReadAllText(_timeLogFilePath);
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    // 파일 내용은 있지만 비어있을 경우에도 종료합니다.
+                    return;
+                }
 
-            var dataView = _mlContext.Data.LoadFromEnumerable(trainingData);
+                var allLogs = JsonSerializer.Deserialize<List<TimeLogEntry>>(json);
 
-            // 2. 파이프라인 구축
-            var pipeline = _mlContext.Transforms.CopyColumns(outputColumnName: "Label", inputColumnName: "FocusScore")
-                .Append(_mlContext.Transforms.Categorical.OneHotEncoding(outputColumnName: "TaskNameEncoded", inputColumnName: "TaskName"))
-                .Append(_mlContext.Transforms.Concatenate("Features", "DayOfWeek", "Hour", "Duration", "TaskNameEncoded"))
-                .Append(_mlContext.Regression.Trainers.FastTree()); // 이제 이 부분이 정상적으로 작동합니다.
+                var trainingData = allLogs
+                    .Where(log => log.FocusScore > 0)
+                    .ToList();
 
-            // 3. 모델 훈련
-            _model = pipeline.Fit(dataView);
+                // 학습할 데이터가 10개 미만이면 훈련이 의미가 없으므로 종료합니다.
+                if (trainingData.Count < 10) return;
 
-            // 4. 훈련된 모델을 파일로 저장
-            _mlContext.Model.Save(_model, dataView.Schema, _modelPath);
+                var dataView = _mlContext.Data.LoadFromEnumerable(trainingData);
+
+                var pipeline = _mlContext.Transforms.CopyColumns(outputColumnName: "Label", inputColumnName: "FocusScore")
+                    .Append(_mlContext.Transforms.Categorical.OneHotEncoding(outputColumnName: "TaskNameEncoded", inputColumnName: "TaskName"))
+                    .Append(_mlContext.Transforms.Concatenate("Features", "DayOfWeek", "Hour", "Duration", "TaskNameEncoded"))
+                    .Append(_mlContext.Regression.Trainers.FastTree());
+
+                _model = pipeline.Fit(dataView);
+                _mlContext.Model.Save(_model, dataView.Schema, _modelPath);
+            }
+            catch (Exception ex)
+            {
+                // 만약 위 과정 중 어디선가 예상치 못한 오류가 발생하면,
+                // 프로그램을 끄지 않고, 어떤 오류인지 메시지를 보여줍니다. (디버깅에 유용)
+                MessageBox.Show($"AI 모델 훈련 중 오류가 발생했습니다: {ex.Message}");
+            }
         }
 
         // 5. 집중도 예측

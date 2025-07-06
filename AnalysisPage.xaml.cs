@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using LiveCharts;
@@ -46,21 +47,22 @@ namespace WorkPartner
             HourPredictionComboBox.SelectedIndex = DateTime.Now.Hour;
         }
 
-        public void LoadAndAnalyzeData()
+        // [오류 수정] public void -> public async void 로 변경
+        public async void LoadAndAnalyzeData()
         {
             LoadTimeLogs();
-            LoadTasksForPrediction(); // 예측용 과목 목록 불러오기
+            LoadTasksForPrediction();
             if (!_allTimeLogs.Any()) return;
 
-            // [AI] 모델 훈련을 시도합니다 (백그라운드에서 실행하면 더 좋지만, 우선은 여기에)
-            _predictionService.TrainModel();
+            // [오류 수정] await Task.Run을 사용하여 UI 멈춤 없이 비동기적으로 모델 훈련
+            await Task.Run(() => _predictionService.TrainModel());
 
+            // UI와 관련된 작업은 다시 UI 스레드에서 처리하도록 합니다.
             AnalyzeOverallStats();
             UpdateTaskAnalysis(DateTime.MinValue, DateTime.MaxValue);
             GenerateFocusBasedAiSuggestion();
             GenerateWorkRestPatternSuggestion();
         }
-
         // [추가] 예측 UI의 과목 콤보박스를 채우기 위한 함수
         private void LoadTasksForPrediction()
         {
