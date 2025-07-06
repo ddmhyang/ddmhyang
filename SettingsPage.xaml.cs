@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿// 파일: SettingsPage.xaml.cs (수정)
+// [수정] 누락되었던 컨트롤 관련 로직을 복원했습니다.
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
@@ -41,15 +43,13 @@ namespace WorkPartner
         private void UpdateUIFromSettings()
         {
             IdleDetectionCheckBox.IsChecked = Settings.IsIdleDetectionEnabled;
-            MiniTimerCheckBox.IsChecked = Settings.IsMiniTimerEnabled; // [UI 로직 추가]
             IdleTimeoutTextBox.Text = Settings.IdleTimeoutSeconds.ToString();
+            MiniTimerCheckBox.IsChecked = Settings.IsMiniTimerEnabled;
             WorkProcessListBox.ItemsSource = Settings.WorkProcesses;
             PassiveProcessListBox.ItemsSource = Settings.PassiveProcesses;
             DistractionProcessListBox.ItemsSource = Settings.DistractionProcesses;
             NagMessageTextBox.Text = Settings.FocusModeNagMessage;
             NagIntervalTextBox.Text = Settings.FocusModeNagIntervalSeconds.ToString();
-
-            // [로직 추가] 태그 규칙 리스트를 UI에 연결합니다.
             TagRulesListView.ItemsSource = Settings.TagRules;
         }
 
@@ -57,7 +57,6 @@ namespace WorkPartner
         {
             if (Settings == null) return;
 
-            // [수정] 어떤 체크박스가 변경되었는지 확인하고 해당 설정을 업데이트합니다.
             if (sender == IdleDetectionCheckBox)
             {
                 Settings.IsIdleDetectionEnabled = IdleDetectionCheckBox.IsChecked ?? true;
@@ -65,14 +64,11 @@ namespace WorkPartner
             else if (sender == MiniTimerCheckBox)
             {
                 Settings.IsMiniTimerEnabled = MiniTimerCheckBox.IsChecked ?? false;
-                // MainWindow에 있는 메서드를 호출하여 즉시 반영
                 (Application.Current.MainWindow as MainWindow)?.ToggleMiniTimer();
             }
 
             SaveSettings();
         }
-
-        // --- 기존 이벤트 핸들러 (생략) ---
         private void Setting_Changed_IdleTimeout(object sender, TextChangedEventArgs e) { if (Settings == null) return; if (int.TryParse(IdleTimeoutTextBox.Text, out int timeout)) { Settings.IdleTimeoutSeconds = timeout; SaveSettings(); } }
         private void AddWorkProcessButton_Click(object sender, RoutedEventArgs e) { var newProcess = WorkProcessInputTextBox.Text.Trim().ToLower(); if (!string.IsNullOrEmpty(newProcess) && !Settings.WorkProcesses.Contains(newProcess)) { Settings.WorkProcesses.Add(newProcess); WorkProcessInputTextBox.Clear(); SaveSettings(); } }
         private void DeleteWorkProcessButton_Click(object sender, RoutedEventArgs e) { if (WorkProcessListBox.SelectedItem is string selectedProcess) { Settings.WorkProcesses.Remove(selectedProcess); SaveSettings(); } }
@@ -80,11 +76,11 @@ namespace WorkPartner
         private void DeletePassiveProcessButton_Click(object sender, RoutedEventArgs e) { if (PassiveProcessListBox.SelectedItem is string selectedProcess) { Settings.PassiveProcesses.Remove(selectedProcess); SaveSettings(); } }
         private void AddDistractionProcessButton_Click(object sender, RoutedEventArgs e) { var newProcess = DistractionProcessInputTextBox.Text.Trim().ToLower(); if (!string.IsNullOrEmpty(newProcess) && !Settings.DistractionProcesses.Contains(newProcess)) { Settings.DistractionProcesses.Add(newProcess); DistractionProcessInputTextBox.Clear(); SaveSettings(); } }
         private void DeleteDistractionProcessButton_Click(object sender, RoutedEventArgs e) { if (DistractionProcessListBox.SelectedItem is string selectedProcess) { Settings.DistractionProcesses.Remove(selectedProcess); SaveSettings(); } }
+
         private void NagMessageTextBox_TextChanged(object sender, TextChangedEventArgs e) { if (Settings == null) return; Settings.FocusModeNagMessage = NagMessageTextBox.Text; SaveSettings(); }
         private void NagIntervalTextBox_TextChanged(object sender, TextChangedEventArgs e) { if (Settings == null) return; if (int.TryParse(NagIntervalTextBox.Text, out int interval)) { if (interval > 0) { Settings.FocusModeNagIntervalSeconds = interval; SaveSettings(); } } }
 
 
-        // --- [이벤트 핸들러 추가] AI 태그 규칙 관리 ---
         private void AddTagRuleButton_Click(object sender, RoutedEventArgs e)
         {
             string keyword = KeywordInput.Text.Trim();
@@ -104,8 +100,8 @@ namespace WorkPartner
             if (!Settings.TagRules.ContainsKey(keyword))
             {
                 Settings.TagRules[keyword] = tag;
-                TagRulesListView.ItemsSource = null; // UI 새로고침을 위해 잠시 연결을 끊었다가
-                TagRulesListView.ItemsSource = Settings.TagRules; // 다시 연결합니다.
+                TagRulesListView.ItemsSource = null;
+                TagRulesListView.ItemsSource = Settings.TagRules;
                 SaveSettings();
                 KeywordInput.Clear();
                 TagInput.Clear();

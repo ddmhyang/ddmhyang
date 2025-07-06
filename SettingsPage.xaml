@@ -6,7 +6,7 @@
              xmlns:local="clr-namespace:WorkPartner"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d" 
-             d:DesignHeight="600" d:DesignWidth="800">
+             d:DesignHeight="700" d:DesignWidth="800">
     <UserControl.Resources>
         <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="16"/>
@@ -28,7 +28,6 @@
 
             <!-- 일반 설정 -->
             <TextBlock Text="일반 설정" Style="{StaticResource HeaderTextStyle}"/>
-            <!-- 일반 설정 Border 안에 추가 -->
             <Border Style="{StaticResource PanelBorderStyle}">
                 <StackPanel>
                     <CheckBox x:Name="IdleDetectionCheckBox" Content="자리 비움 감지 활성화" Margin="10" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
@@ -37,16 +36,8 @@
                         <TextBox x:Name="IdleTimeoutTextBox" Width="50" Margin="5,0" TextChanged="Setting_Changed_IdleTimeout"/>
                     </StackPanel>
                     <CheckBox x:Name="MiniTimerCheckBox" Content="미니 타이머 (항상 위) 사용" Margin="10" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
-
-                    <!-- 여기에 추가 -->
-                    <TextBlock Text="포커스 모드 알림 메시지" Style="{StaticResource HeaderTextStyle}" Margin="0,10,0,0"/>
-                    <TextBox x:Name="NagMessageTextBox" Margin="0,0,0,10" TextChanged="NagMessageTextBox_TextChanged"/>
-
-                    <TextBlock Text="포커스 모드 알림 간격 (초)" Style="{StaticResource HeaderTextStyle}" Margin="0,10,0,0"/>
-                    <TextBox x:Name="NagIntervalTextBox" Width="60" TextChanged="NagIntervalTextBox_TextChanged"/>
                 </StackPanel>
             </Border>
-
 
             <!-- 프로세스 설정 -->
             <TextBlock Text="프로세스 설정" Style="{StaticResource HeaderTextStyle}"/>
@@ -62,41 +53,34 @@
                         <TextBlock Text="작업 프로그램" FontWeight="Bold"/>
                         <TextBox x:Name="WorkProcessInputTextBox"/>
                         <Button Content="추가" Click="AddWorkProcessButton_Click" Margin="0,5"/>
-                        <ListBox x:Name="WorkProcessListBox" Height="100">
-                            <ListBox.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="삭제" Click="DeleteWorkProcessButton_Click"/>
-                                </ContextMenu>
-                            </ListBox.ContextMenu>
-                        </ListBox>
+                        <ListBox x:Name="WorkProcessListBox" Height="100"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Margin="5,0">
                         <TextBlock Text="수동 프로그램" FontWeight="Bold"/>
                         <TextBox x:Name="PassiveProcessInputTextBox"/>
                         <Button Content="추가" Click="AddPassiveProcessButton_Click" Margin="0,5"/>
-                        <ListBox x:Name="PassiveProcessListBox" Height="100">
-                            <ListBox.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="삭제" Click="DeletePassiveProcessButton_Click"/>
-                                </ContextMenu>
-                            </ListBox.ContextMenu>
-                        </ListBox>
+                        <ListBox x:Name="PassiveProcessListBox" Height="100"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="2" Margin="10,0,0,0">
                         <TextBlock Text="방해 프로그램" FontWeight="Bold"/>
                         <TextBox x:Name="DistractionProcessInputTextBox"/>
                         <Button Content="추가" Click="AddDistractionProcessButton_Click" Margin="0,5"/>
-                        <ListBox x:Name="DistractionProcessListBox" Height="100">
-                            <ListBox.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="삭제" Click="DeleteDistractionProcessButton_Click"/>
-                                </ContextMenu>
-                            </ListBox.ContextMenu>
-                        </ListBox>
+                        <ListBox x:Name="DistractionProcessListBox" Height="100"/>
                     </StackPanel>
                 </Grid>
+            </Border>
+
+            <!-- 집중 모드 설정 -->
+            <TextBlock Text="집중 모드 설정" Style="{StaticResource HeaderTextStyle}"/>
+            <Border Style="{StaticResource PanelBorderStyle}">
+                <StackPanel>
+                    <TextBlock Text="경고 메시지"/>
+                    <TextBox x:Name="NagMessageTextBox" Margin="0,5,0,10" TextChanged="NagMessageTextBox_TextChanged"/>
+                    <TextBlock Text="경고 간격 (초)"/>
+                    <TextBox x:Name="NagIntervalTextBox" Margin="0,5,0,0" TextChanged="NagIntervalTextBox_TextChanged"/>
+                </StackPanel>
             </Border>
 
             <!-- AI 태그 규칙 설정 -->

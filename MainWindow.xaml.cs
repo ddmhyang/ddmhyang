@@ -1,19 +1,22 @@
-﻿using System.Windows;
-using System.IO;            // File 관련
-using System.Text.Json;     // JsonSerializer 관련
-
+﻿// 파일: MainWindow.xaml.cs (수정)
+// [수정] 누락된 필드 변수 선언, using 구문, 메서드 호출 방식을 모두 수정했습니다.
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.IO;
+using System.Text.Json;
 
 namespace WorkPartner
 {
     public partial class MainWindow : Window
     {
+        // [수정] 페이지 참조를 위한 필드 변수 선언
         private DashboardPage _dashboardPage;
         private SettingsPage _settingsPage;
         private AnalysisPage _analysisPage;
         private ShopPage _shopPage;
-        private ClosetPage _closetPage; // [추가] 옷장 페이지 변수
-        private MiniTimerWindow _miniTimerWindow; // [변수 추가]
-
+        private ClosetPage _closetPage;
+        private MiniTimerWindow _miniTimerWindow;
 
         public MainWindow()
         {
@@ -22,12 +25,66 @@ namespace WorkPartner
             _settingsPage = new SettingsPage();
             _analysisPage = new AnalysisPage();
             _shopPage = new ShopPage();
-            _closetPage = new ClosetPage(); // [추가] 옷장 페이지 초기화
-            PageContent.Content = _dashboardPage;
-            ToggleMiniTimer();
+            _closetPage = new ClosetPage();
 
+            PageContent.Content = _dashboardPage;
+            // [수정] 버튼 객체를 직접 전달하도록 변경
+            UpdateNavButtonSelection(DashboardButton);
+
+            ToggleMiniTimer();
         }
 
+        private void UpdateNavButtonSelection(Button selectedButton)
+        {
+            foreach (var child in NavigationPanel.Children)
+            {
+                if (child is Button button)
+                {
+                    button.Background = Brushes.Transparent;
+                }
+            }
+            if (selectedButton != null)
+            {
+                selectedButton.Background = new SolidColorBrush(Color.FromRgb(0xE0, 0xE0, 0xE0));
+            }
+        }
+
+        private void DashboardButton_Click(object sender, RoutedEventArgs e)
+        {
+            _dashboardPage.LoadAllData();
+            _dashboardPage.SetMiniTimerReference(_miniTimerWindow);
+            PageContent.Content = _dashboardPage;
+            UpdateNavButtonSelection(sender as Button);
+        }
+
+        private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            PageContent.Content = _settingsPage;
+            UpdateNavButtonSelection(sender as Button);
+        }
+
+        private void AnalysisButton_Click(object sender, RoutedEventArgs e)
+        {
+            _analysisPage.LoadAndAnalyzeData();
+            PageContent.Content = _analysisPage;
+            UpdateNavButtonSelection(sender as Button);
+        }
+
+        private void ShopButton_Click(object sender, RoutedEventArgs e)
+        {
+            _shopPage.LoadSettings();
+            PageContent.Content = _shopPage;
+            UpdateNavButtonSelection(sender as Button);
+        }
+
+        private void ClosetButton_Click(object sender, RoutedEventArgs e)
+        {
+            _closetPage.LoadData();
+            PageContent.Content = _closetPage;
+            UpdateNavButtonSelection(sender as Button);
+        }
+
+        // [수정] public으로 변경하여 외부에서 접근 가능하도록 함
         public void ToggleMiniTimer()
         {
             var settings = LoadSettings();
@@ -56,37 +113,5 @@ namespace WorkPartner
             }
             return new AppSettings();
         }
-
-        private void DashboardButton_Click(object sender, RoutedEventArgs e)
-        {
-            _dashboardPage.LoadAllData();
-            _dashboardPage.SetMiniTimerReference(_miniTimerWindow); // 참조 전달
-            PageContent.Content = _dashboardPage;
-        }
-
-        private void SettingsButton_Click(object sender, RoutedEventArgs e)
-        {
-            PageContent.Content = _settingsPage;
-        }
-
-        private void AnalysisButton_Click(object sender, RoutedEventArgs e)
-        {
-            _analysisPage.LoadAndAnalyzeData();
-            PageContent.Content = _analysisPage;
-        }
-
-        // [수정] 상점 버튼 클릭 시, 상점 페이지의 데이터를 새로고침합니다.
-        private void ShopButton_Click(object sender, RoutedEventArgs e)
-        {
-            _shopPage.LoadSettings(); // 상점 페이지를 보여주기 전에 최신 설정(코인 정보)을 불러옵니다.
-            PageContent.Content = _shopPage;
-        }
-
-        private void ClosetButton_Click(object sender, RoutedEventArgs e)
-        {
-            _closetPage.LoadData(); // 페이지를 보여주기 전에 최신 데이터를 불러옵니다.
-            PageContent.Content = _closetPage;
-        }
-
     }
 }

@@ -49,6 +49,21 @@ namespace WorkPartner
         private DateTime _lastSuggestionTime;
         #endregion
 
+        // [추가] 과목별 색상을 저장하기 위한 Dictionary와 색상 팔레트
+        private Dictionary<string, SolidColorBrush> _taskColors = new Dictionary<string, SolidColorBrush>();
+        private List<SolidColorBrush> _colorPalette = new List<SolidColorBrush>
+        {
+            new SolidColorBrush(Color.FromRgb(255, 182, 193)), // LightPink
+            new SolidColorBrush(Color.FromRgb(173, 216, 230)), // LightBlue
+            new SolidColorBrush(Color.FromRgb(144, 238, 144)), // LightGreen
+            new SolidColorBrush(Color.FromRgb(255, 255, 224)), // LightYellow
+            new SolidColorBrush(Color.FromRgb(221, 160, 221)), // Plum
+            new SolidColorBrush(Color.FromRgb(255, 218, 185)), // PeachPuff
+            new SolidColorBrush(Color.FromRgb(175, 238, 238)), // PaleTurquoise
+            new SolidColorBrush(Color.FromRgb(240, 230, 140)), // Khaki
+        };
+        private int _colorIndex = 0;
+
         public DashboardPage()
         {
             InitializeComponent();
@@ -67,6 +82,17 @@ namespace WorkPartner
             TodoItems = new ObservableCollection<TodoItem>(); TodoTreeView.ItemsSource = TodoItems;
             TimeLogEntries = new ObservableCollection<TimeLogEntry>();
             SuggestedTags = new ObservableCollection<string>(); SuggestedTagsItemsControl.ItemsSource = SuggestedTags;
+        }
+
+        // [메서드 추가] 과목에 대한 색상을 가져오거나 새로 할당합니다.
+        private SolidColorBrush GetColorForTask(string taskName)
+        {
+            if (!_taskColors.ContainsKey(taskName))
+            {
+                _taskColors[taskName] = _colorPalette[_colorIndex % _colorPalette.Count];
+                _colorIndex++;
+            }
+            return _taskColors[taskName];
         }
 
         #region 데이터 저장 / 불러오기
@@ -91,7 +117,7 @@ namespace WorkPartner
             {
                 LoadSettings();
                 UpdateCoinDisplay();
-                DashboardCharacterDisplay.UpdateCharacter();
+                //DashboardCharacterDisplay.UpdateCharacter();
             }
         }
 
@@ -221,7 +247,63 @@ namespace WorkPartner
         private void UpdateTagSuggestions(TodoItem todo) { SuggestedTags.Clear(); if (todo == null) return; var suggestions = new List<string>(); if (_currentWorkingTask != null && !string.IsNullOrWhiteSpace(_currentWorkingTask.Text)) { suggestions.Add($"#{_currentWorkingTask.Text}"); } if (_settings != null && _settings.TagRules != null) { foreach (var rule in _settings.TagRules) { if (todo.Text.ToLower().Contains(rule.Key.ToLower())) { suggestions.Add(rule.Value); } } } foreach (var suggestion in suggestions.Distinct().Except(todo.Tags)) { SuggestedTags.Add(suggestion); } }
         private void UpdateSelectedTaskTotalTimeDisplay() { if (_currentWorkingTask != null) { var taskLogs = TimeLogEntries.Where(log => log.TaskText == _currentWorkingTask.Text && log.StartTime.Date == DateTime.Today.Date); _selectedTaskTotalTimeFromLogs = new TimeSpan(taskLogs.Sum(log => log.Duration.Ticks)); SelectedTaskTotalTimeDisplay.Text = $"선택 과목 총계: {_selectedTaskTotalTimeFromLogs:hh\\:mm\\:ss}"; } else { _selectedTaskTotalTimeFromLogs = TimeSpan.Zero; SelectedTaskTotalTimeDisplay.Text = "선택 과목 총계: 00:00:00"; } }
         private void RecalculateAllTotals() { var todayLogs = TimeLogEntries.Where(log => log.StartTime.Date == DateTime.Today.Date); _totalTimeTodayFromLogs = new TimeSpan(todayLogs.Sum(log => log.Duration.Ticks)); UpdateLiveTimeDisplays(); UpdateSelectedTaskTotalTimeDisplay(); }
-        private void RenderTimeTable() { TimeTableCanvas.Children.Clear(); for (int i = 0; i < 24; i++) { var line = new Line { X1 = 35, Y1 = i * 60, X2 = TimeTableCanvas.ActualWidth, Y2 = i * 60, Stroke = Brushes.LightGray, StrokeThickness = (i % 6 == 0) ? 1 : 0.5 }; var txt = new TextBlock { Text = $"{i:00}:00", Foreground = Brushes.Gray, FontSize = 10 }; Canvas.SetTop(line, i * 60); Canvas.SetLeft(line, 0); Canvas.SetTop(txt, i * 60 - 7); Canvas.SetLeft(txt, 5); TimeTableCanvas.Children.Add(line); TimeTableCanvas.Children.Add(txt); } foreach (var entry in TimeLogEntries.Where(log => log.StartTime.Date == DateTime.Today.Date).Reverse()) { double top = entry.StartTime.TimeOfDay.TotalMinutes; double h = Math.Max(1, entry.Duration.TotalMinutes); var rect = new Border { Height = h, Width = Math.Max(10, TimeTableCanvas.ActualWidth - 50), Background = Brushes.SkyBlue, CornerRadius = new CornerRadius(2), BorderBrush = Brushes.CornflowerBlue, BorderThickness = new Thickness(1), ToolTip = new ToolTip { Content = $"{entry.TaskText}\n{entry.StartTime:HH:mm} ~ {entry.EndTime:HH:mm}" }, Tag = entry }; rect.MouseLeftButtonDown += TimeLogRect_MouseLeftButtonDown; Canvas.SetTop(rect, top); Canvas.SetLeft(rect, 40); TimeTableCanvas.Children.Add(rect); } }
+
+        // [수정] RenderTimeTable 메서드 개선
+        private void RenderTimeTable()
+        {
+            TimeTableCanvas.Children.Clear();
+
+            // 시간 눈금선 그리기
+            for (int i = 0; i < 24; i++)
+            {
+                var line = new Line { X1 = 35, Y1 = i * 60, X2 = TimeTableCanvas.ActualWidth, Y2 = i * 60, Stroke = Brushes.LightGray, StrokeThickness = (i % 6 == 0) ? 1 : 0.5 };
+                var txt = new TextBlock { Text = $"{i:00}:00", Foreground = Brushes.Gray, FontSize = 10 };
+                Canvas.SetTop(line, i * 60);
+                Canvas.SetLeft(line, 0);
+                Canvas.SetTop(txt, i * 60 - 7);
+                Canvas.SetLeft(txt, 0);
+                TimeTableCanvas.Children.Add(line);
+                TimeTableCanvas.Children.Add(txt);
+            }
+
+            // 시간 기록 막대 그리기
+            foreach (var entry in TimeLogEntries.Where(log => log.StartTime.Date == DateTime.Today.Date).Reverse())
+            {
+                double top = entry.StartTime.TimeOfDay.TotalMinutes;
+                double h = Math.Max(1, entry.Duration.TotalMinutes);
+
+                SolidColorBrush taskColor = GetColorForTask(entry.TaskText);
+
+                var rect = new Border
+                {
+                    Height = h,
+                    Width = Math.Max(10, TimeTableCanvas.ActualWidth - 50),
+                    Background = taskColor,
+                    CornerRadius = new CornerRadius(3), // 모서리를 둥글게
+                    ToolTip = new ToolTip { Content = $"{entry.TaskText}\n{entry.StartTime:HH:mm} ~ {entry.EndTime:HH:mm}" },
+                    Tag = entry
+                };
+
+                // 막대 내부에 텍스트 추가
+                if (h > 15) // 막대가 너무 작으면 텍스트를 표시하지 않음
+                {
+                    rect.Child = new TextBlock
+                    {
+                        Text = entry.TaskText,
+                        Foreground = Brushes.Black,
+                        FontSize = 10,
+                        Margin = new Thickness(5, 2, 5, 2),
+                        TextTrimming = TextTrimming.CharacterEllipsis
+                    };
+                }
+
+                rect.MouseLeftButtonDown += TimeLogRect_MouseLeftButtonDown;
+                Canvas.SetTop(rect, top);
+                Canvas.SetLeft(rect, 40);
+                TimeTableCanvas.Children.Add(rect);
+            }
+        }
+
         private TodoItem FindParent(TodoItem currentParent, ObservableCollection<TodoItem> items, TodoItem target) { if (items.Contains(target)) return currentParent; foreach (var item in items) { var found = FindParent(item, item.SubTasks, target); if (found != null) return found; } return null; }
         #endregion
     }
