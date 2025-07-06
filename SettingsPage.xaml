@@ -28,6 +28,7 @@
 
             <!-- 일반 설정 -->
             <TextBlock Text="일반 설정" Style="{StaticResource HeaderTextStyle}"/>
+            <!-- 일반 설정 Border 안에 추가 -->
             <Border Style="{StaticResource PanelBorderStyle}">
                 <StackPanel>
                     <CheckBox x:Name="IdleDetectionCheckBox" Content="자리 비움 감지 활성화" Margin="10" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
@@ -36,8 +37,16 @@
                         <TextBox x:Name="IdleTimeoutTextBox" Width="50" Margin="5,0" TextChanged="Setting_Changed_IdleTimeout"/>
                     </StackPanel>
                     <CheckBox x:Name="MiniTimerCheckBox" Content="미니 타이머 (항상 위) 사용" Margin="10" Checked="Setting_Changed" Unchecked="Setting_Changed"/>
+
+                    <!-- 여기에 추가 -->
+                    <TextBlock Text="포커스 모드 알림 메시지" Style="{StaticResource HeaderTextStyle}" Margin="0,10,0,0"/>
+                    <TextBox x:Name="NagMessageTextBox" Margin="0,0,0,10" TextChanged="NagMessageTextBox_TextChanged"/>
+
+                    <TextBlock Text="포커스 모드 알림 간격 (초)" Style="{StaticResource HeaderTextStyle}" Margin="0,10,0,0"/>
+                    <TextBox x:Name="NagIntervalTextBox" Width="60" TextChanged="NagIntervalTextBox_TextChanged"/>
                 </StackPanel>
             </Border>
+
 
             <!-- 프로세스 설정 -->
             <TextBlock Text="프로세스 설정" Style="{StaticResource HeaderTextStyle}"/>

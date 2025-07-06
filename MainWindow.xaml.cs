@@ -1,4 +1,7 @@
 ﻿using System.Windows;
+using System.IO;            // File 관련
+using System.Text.Json;     // JsonSerializer 관련
+
 
 namespace WorkPartner
 {
