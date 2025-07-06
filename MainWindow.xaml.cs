@@ -9,6 +9,8 @@ namespace WorkPartner
         private AnalysisPage _analysisPage;
         private ShopPage _shopPage;
         private ClosetPage _closetPage; // [추가] 옷장 페이지 변수
+        private MiniTimerWindow _miniTimerWindow; // [변수 추가]
+
 
         public MainWindow()
         {
@@ -19,11 +21,43 @@ namespace WorkPartner
             _shopPage = new ShopPage();
             _closetPage = new ClosetPage(); // [추가] 옷장 페이지 초기화
             PageContent.Content = _dashboardPage;
+            ToggleMiniTimer();
+
+        }
+
+        public void ToggleMiniTimer()
+        {
+            var settings = LoadSettings();
+            if (settings.IsMiniTimerEnabled)
+            {
+                if (_miniTimerWindow == null || !_miniTimerWindow.IsVisible)
+                {
+                    _miniTimerWindow = new MiniTimerWindow();
+                    _miniTimerWindow.Show();
+                }
+            }
+            else
+            {
+                _miniTimerWindow?.Close();
+                _miniTimerWindow = null;
+            }
+        }
+
+        private AppSettings LoadSettings()
+        {
+            string settingsFilePath = "app_settings.json";
+            if (File.Exists(settingsFilePath))
+            {
+                var json = File.ReadAllText(settingsFilePath);
+                return JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+            }
+            return new AppSettings();
         }
 
         private void DashboardButton_Click(object sender, RoutedEventArgs e)
         {
-            _dashboardPage.LoadAllData(); // 대시보드로 돌아올 때마다 데이터 새로고침
+            _dashboardPage.LoadAllData();
+            _dashboardPage.SetMiniTimerReference(_miniTimerWindow); // 참조 전달
             PageContent.Content = _dashboardPage;
         }
 

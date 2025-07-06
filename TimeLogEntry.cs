@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace WorkPartner
 {
@@ -7,11 +8,20 @@ namespace WorkPartner
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public string TaskText { get; set; }
+        public int FocusScore { get; set; } // 1~5점, 평가 안됐으면 0
 
-        // [속성 추가] 사용자가 평가한 집중도 점수 (1~5점). 평가되지 않은 경우 0.
-        public int FocusScore { get; set; }
+        /// <summary>
+        /// [속성 추가] 휴식 시간에 한 활동 목록입니다. (예: "식사", "스트레칭")
+        /// </summary>
+        public List<string> BreakActivities { get; set; }
 
         public TimeSpan Duration => EndTime - StartTime;
+
+        public TimeLogEntry()
+        {
+            // BreakActivities 리스트를 초기화해줍니다.
+            BreakActivities = new List<string>();
+        }
 
         public override string ToString()
         {

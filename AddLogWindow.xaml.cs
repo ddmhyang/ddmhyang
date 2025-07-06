@@ -2,6 +2,8 @@
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace WorkPartner
 {
@@ -9,8 +11,8 @@ namespace WorkPartner
     {
         public TimeLogEntry NewLogEntry { get; private set; }
         public bool IsDeleted { get; private set; } = false;
+        private int _currentScore = 0;
 
-        // [핵심 수정] 생성자가 이제 'TodoItem' 대신 'TaskItem' 목록을 받도록 변경합니다.
         public AddLogWindow(ObservableCollection<TaskItem> tasks, TimeLogEntry logToEdit = null)
         {
             InitializeComponent();
@@ -21,16 +23,20 @@ namespace WorkPartner
                 this.Title = "기록 수정";
                 NewLogEntry = logToEdit;
 
-                // 콤보박스에서 기존 과목을 찾아 선택합니다.
                 TaskComboBox.SelectedItem = tasks.FirstOrDefault(t => t.Text == logToEdit.TaskText);
                 LogDatePicker.SelectedDate = logToEdit.StartTime.Date;
                 StartTimeTextBox.Text = logToEdit.StartTime.ToString("HH:mm");
                 EndTimeTextBox.Text = logToEdit.EndTime.ToString("HH:mm");
+
+                // [로직 추가] 기존 평점을 불러와 UI에 반영
+                _currentScore = logToEdit.FocusScore;
+                UpdateRatingUI(_currentScore);
             }
             else
             {
                 this.Title = "수동 기록 추가";
                 DeleteButton.Visibility = Visibility.Collapsed;
+                NewLogEntry = new TimeLogEntry(); // 새 로그 엔트리 생성
                 if (tasks.Count > 0) { TaskComboBox.SelectedIndex = 0; }
                 LogDatePicker.SelectedDate = DateTime.Today;
             }
@@ -47,13 +53,11 @@ namespace WorkPartner
             }
             if (startTime >= endTime) { MessageBox.Show("종료 시간은 시작 시간보다 나중이어야 합니다."); return; }
 
-            NewLogEntry = new TimeLogEntry
-            {
-                // [핵심 수정] 선택된 항목을 'TaskItem'으로 변환하여 Text를 가져옵니다.
-                TaskText = (TaskComboBox.SelectedItem as TaskItem).Text,
-                StartTime = startTime,
-                EndTime = endTime
-            };
+            // 기존 NewLogEntry 객체를 업데이트하거나 새로 생성
+            NewLogEntry.TaskText = (TaskComboBox.SelectedItem as TaskItem).Text;
+            NewLogEntry.StartTime = startTime;
+            NewLogEntry.EndTime = endTime;
+            NewLogEntry.FocusScore = _currentScore; // [로직 추가] 저장 시 평점 반영
 
             this.DialogResult = true;
             this.Close();
@@ -73,6 +77,26 @@ namespace WorkPartner
         {
             this.DialogResult = false;
             this.Close();
+        }
+
+        // [메서드 추가] 별점 버튼 클릭 이벤트
+        private void RatingButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && int.TryParse(button.Tag.ToString(), out int score))
+            {
+                _currentScore = score;
+                UpdateRatingUI(score);
+            }
+        }
+
+        // [메서드 추가] 별점 UI 업데이트
+        private void UpdateRatingUI(int score)
+        {
+            foreach (Button btn in RatingPanel.Children)
+            {
+                int btnScore = int.Parse(btn.Tag.ToString());
+                btn.Foreground = btnScore <= score ? Brushes.Gold : Brushes.LightGray;
+            }
         }
     }
 }

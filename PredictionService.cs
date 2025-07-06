@@ -1,15 +1,13 @@
-﻿// 파일 이름: PredictionService.cs
-// 역할: ML.NET 모델을 훈련시키고, 예측을 수행하는 모든 AI 관련 작업을 담당합니다.
+﻿// 파일: PredictionService.cs (수정)
+// [수정] MessageBox를 사용하기 위해 'System.Windows' 네임스페이스를 추가했습니다.
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using Microsoft.ML;
-// [수정] FastTree 알고리즘을 사용하기 위해 네임스페이스를 추가합니다.
 using Microsoft.ML.Trainers.FastTree;
-using System.Windows; // [오류 수정] MessageBox를 사용하기 위해 추가
-
+using System.Windows;
 
 namespace WorkPartner.AI
 {
@@ -25,23 +23,14 @@ namespace WorkPartner.AI
             _mlContext = new MLContext(seed: 0);
         }
 
-        // 1. 모델 훈련
         public void TrainModel()
         {
-            try // <--- 여기부터 위기 상황에 대비 시작!
+            try
             {
-                if (!File.Exists(_timeLogFilePath))
-                {
-                    // 파일이 없으면 훈련을 시도조차 하지 않고 조용히 종료합니다.
-                    return;
-                }
+                if (!File.Exists(_timeLogFilePath)) return;
 
                 var json = File.ReadAllText(_timeLogFilePath);
-                if (string.IsNullOrWhiteSpace(json))
-                {
-                    // 파일 내용은 있지만 비어있을 경우에도 종료합니다.
-                    return;
-                }
+                if (string.IsNullOrWhiteSpace(json)) return;
 
                 var allLogs = JsonSerializer.Deserialize<List<TimeLogEntry>>(json);
 
@@ -49,7 +38,6 @@ namespace WorkPartner.AI
                     .Where(log => log.FocusScore > 0)
                     .ToList();
 
-                // 학습할 데이터가 10개 미만이면 훈련이 의미가 없으므로 종료합니다.
                 if (trainingData.Count < 10) return;
 
                 var dataView = _mlContext.Data.LoadFromEnumerable(trainingData);
@@ -64,13 +52,10 @@ namespace WorkPartner.AI
             }
             catch (Exception ex)
             {
-                // 만약 위 과정 중 어디선가 예상치 못한 오류가 발생하면,
-                // 프로그램을 끄지 않고, 어떤 오류인지 메시지를 보여줍니다. (디버깅에 유용)
                 MessageBox.Show($"AI 모델 훈련 중 오류가 발생했습니다: {ex.Message}");
             }
         }
 
-        // 5. 집중도 예측
         public float Predict(ModelInput input)
         {
             if (_model == null)

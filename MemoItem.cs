@@ -1,5 +1,4 @@
-﻿// 파일 경로: WorkPartner/MemoItem.cs
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Linq;
 
@@ -24,11 +23,16 @@ namespace WorkPartner
             {
                 _content = value;
                 OnPropertyChanged(nameof(Content));
-                OnPropertyChanged(nameof(Snippet)); // 내용이 바뀌면 미리보기도 바뀌도록 알림
+                OnPropertyChanged(nameof(Snippet));
             }
         }
 
-        // 목록에 표시될 내용 미리보기 (최대 30자)
+        /// <summary>
+        /// [속성 추가] 메모가 생성된 날짜입니다.
+        /// </summary>
+        public DateTime CreatedDate { get; set; }
+
+
         public string Snippet
         {
             get
@@ -43,6 +47,7 @@ namespace WorkPartner
             Id = Guid.NewGuid();
             Title = "새 메모";
             Content = "";
+            CreatedDate = DateTime.Now; // 새 메모 생성 시 현재 날짜를 기록합니다.
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

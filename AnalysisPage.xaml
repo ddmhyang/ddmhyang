@@ -3,118 +3,151 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:WorkPartner"
              xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
+             xmlns:local="clr-namespace:WorkPartner"
              mc:Ignorable="d" 
-             d:DesignHeight="700" d:DesignWidth="480">
+             d:DesignHeight="700" d:DesignWidth="900">
+    <UserControl.Resources>
+        <Style x:Key="HeaderTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+        <Style x:Key="PanelBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="#F9F9F9"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="Padding" Value="15"/>
+            <Setter Property="Margin" Value="0,0,0,15"/>
+        </Style>
+    </UserControl.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="20">
-            <TextBlock Text="작업 패턴 분석" FontSize="24" FontWeight="Bold" Margin="0,0,0,20"/>
+            <TextBlock Text="학습 통계 분석" Style="{StaticResource HeaderTextStyle}"/>
 
-            <!-- [UI 추가] AI 예측 섹션 -->
-            <Border Background="#E3F2FD" BorderBrush="#90CAF9" BorderThickness="1" CornerRadius="5" Padding="15" Margin="0,0,0,15">
-                <StackPanel>
-                    <TextBlock Text="🧠 AI 집중도 예측" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition/>
-                            <RowDefinition/>
-                            <RowDefinition/>
-                        </Grid.RowDefinitions>
-
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="과목:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <ComboBox Grid.Row="0" Grid.Column="1" x:Name="TaskPredictionComboBox" DisplayMemberPath="Text"/>
-
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="요일:" VerticalAlignment="Center" Margin="0,5,10,5"/>
-                        <ComboBox Grid.Row="1" Grid.Column="1" x:Name="DayOfWeekPredictionComboBox" Margin="0,5,0,5"/>
-
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="시간:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <ComboBox Grid.Row="2" Grid.Column="1" x:Name="HourPredictionComboBox"/>
-
-                        <Button Grid.Row="0" Grid.Column="2" Grid.RowSpan="3" Content="예측" Width="60" Margin="10,0,0,0" Click="PredictButton_Click"/>
-                    </Grid>
-                    <TextBlock x:Name="PredictionResultTextBlock" Text="예상 집중도: -" HorizontalAlignment="Center" FontWeight="Bold" Margin="0,10,0,0" FontSize="14"/>
-                </StackPanel>
-            </Border>
-
-            <!-- ... 나머지 UI (요약, 차트, 제안 등)는 이전과 동일 ... -->
-            <Border Background="#F5F5F5" CornerRadius="5" Padding="15" Margin="0,0,0,15">
-                <StackPanel>
-                    <TextBlock Text="전체 요약" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="총 작업일 수:" FontWeight="Medium" Margin="0,0,10,5"/>
-                        <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TotalDaysTextBlock" Text="0 일"/>
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="총 작업 시간:" FontWeight="Medium" Margin="0,0,10,5"/>
-                        <TextBlock Grid.Row="1" Grid.Column="1" x:Name="TotalWorkTimeTextBlock" Text="0 시간 0 분"/>
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="최고 집중 시간:" FontWeight="Medium" Margin="0,0,10,5"/>
-                        <TextBlock Grid.Row="2" Grid.Column="1" x:Name="MaxConcentrationTimeTextBlock" Text="0 분"/>
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="주요 집중 시간대:" FontWeight="Medium" Margin="0,0,10,0"/>
-                        <TextBlock Grid.Row="3" Grid.Column="1" x:Name="PeakConcentrationHourTextBlock" Text="- 시"/>
-                    </Grid>
-                </StackPanel>
-            </Border>
-            <Border Background="#F5F5F5" CornerRadius="5" Padding="15" Margin="0,0,0,15">
-                <StackPanel>
-                    <TextBlock Text="시간대별 작업량 (분)" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                    <lvc:CartesianChart Series="{Binding HourAnalysisSeries}" LegendLocation="None" Height="200">
-                        <lvc:CartesianChart.AxisX>
-                            <lvc:Axis Title="시간 (0시 ~ 23시)" Labels="{Binding HourLabels}"/>
-                        </lvc:CartesianChart.AxisX>
-                        <lvc:CartesianChart.AxisY>
-                            <lvc:Axis Title="작업 시간 (분)" LabelFormatter="{Binding YFormatter}"/>
-                        </lvc:CartesianChart.AxisY>
-                    </lvc:CartesianChart>
-                </StackPanel>
-            </Border>
-            <Border Background="#F5F5F5" CornerRadius="5" Padding="15" Margin="0,0,0,15">
-                <StackPanel>
-                    <TextBlock Text="과목별 작업 시간" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <Button Content="오늘" Margin="0,0,5,0" Click="TodayButton_Click"/>
-                        <Button Content="이번 주" Margin="0,0,5,0" Click="ThisWeekButton_Click"/>
-                        <Button Content="이번 달" Margin="0,0,5,0" Click="ThisMonthButton_Click"/>
-                        <Button Content="전체" Margin="0,0,5,0" Click="TotalButton_Click"/>
+            <!-- 전체 통계 -->
+            <Border Style="{StaticResource PanelBorderStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                        <TextBlock Text="총 학습 시간" FontWeight="Bold" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="TotalWorkTimeTextBlock" Text="-" FontSize="18" HorizontalAlignment="Center"/>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <DatePicker x:Name="StartDatePicker" Width="120"/>
-                        <TextBlock Text=" ~ " VerticalAlignment="Center" Margin="5,0"/>
-                        <DatePicker x:Name="EndDatePicker" Width="120"/>
-                        <Button Content="조회" Margin="10,0,0,0" Click="CustomDateButton_Click"/>
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                        <TextBlock Text="총 학습 일수" FontWeight="Bold" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="TotalDaysTextBlock" Text="-" FontSize="18" HorizontalAlignment="Center"/>
                     </StackPanel>
-                    <ListView x:Name="TaskAnalysisListView" BorderThickness="0" MaxHeight="200">
+                    <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                        <TextBlock Text="최대 집중 시간" FontWeight="Bold" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="MaxConcentrationTimeTextBlock" Text="-" FontSize="18" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="3" HorizontalAlignment="Center">
+                        <TextBlock Text="주요 집중 시간대" FontWeight="Bold" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="PeakConcentrationHourTextBlock" Text="-" FontSize="18" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- 과목별 분석 -->
+            <Border Style="{StaticResource PanelBorderStyle}">
+                <StackPanel>
+                    <TextBlock Text="과목별 학습 시간" Style="{StaticResource HeaderTextStyle}" Margin="0"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button Content="오늘" Click="TodayButton_Click" Margin="0,0,5,0"/>
+                        <Button Content="이번 주" Click="ThisWeekButton_Click" Margin="0,0,5,0"/>
+                        <Button Content="이번 달" Click="ThisMonthButton_Click" Margin="0,0,5,0"/>
+                        <Button Content="전체" Click="TotalButton_Click" Margin="0,0,5,0"/>
+                        <DatePicker x:Name="StartDatePicker" Margin="10,0,5,0"/>
+                        <TextBlock Text="~" VerticalAlignment="Center"/>
+                        <DatePicker x:Name="EndDatePicker" Margin="5,0,5,0"/>
+                        <Button Content="조회" Click="CustomDateButton_Click"/>
+                    </StackPanel>
+                    <ListView x:Name="TaskAnalysisListView" MaxHeight="200">
                         <ListView.View>
                             <GridView>
-                                <GridViewColumn Header="과목명" DisplayMemberBinding="{Binding TaskName}" Width="200"/>
-                                <GridViewColumn Header="총 작업 시간" DisplayMemberBinding="{Binding TotalTimeFormatted}" Width="150"/>
+                                <GridViewColumn Header="과목명" DisplayMemberBinding="{Binding TaskName}" Width="300"/>
+                                <GridViewColumn Header="총 학습 시간" DisplayMemberBinding="{Binding TotalTimeFormatted}" Width="200"/>
                             </GridView>
                         </ListView.View>
                     </ListView>
                 </StackPanel>
             </Border>
-            <Border Background="#FFF7E0" BorderBrush="#FFD6A5" BorderThickness="1" CornerRadius="5" Padding="15">
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="💡" FontSize="18" VerticalAlignment="Center"/>
-                        <TextBlock Text="AI 분석 및 제안" FontSize="18" FontWeight="SemiBold" Margin="10,0,0,0" VerticalAlignment="Center"/>
+
+            <!-- 집중도 분석 -->
+            <TextBlock Text="집중도 분석" Style="{StaticResource HeaderTextStyle}" Margin="0,15,0,10"/>
+            <Border Style="{StaticResource PanelBorderStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="10">
+                        <TextBlock Text="전체 평균 집중도: " FontWeight="Bold" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="OverallAverageFocusScoreTextBlock" Text="-" FontSize="16" FontWeight="Bold" Foreground="DodgerBlue" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <TextBlock x:Name="GoldenTimeSuggestionTextBlock" TextWrapping="Wrap" FontStyle="Italic" Margin="0,0,0,10"/>
-                    <Separator/>
-                    <TextBlock x:Name="WorkRestPatternSuggestionTextBlock" TextWrapping="Wrap" FontStyle="Italic" Margin="0,10,0,0"/>
+
+                    <ListView Grid.Row="1" x:Name="TaskFocusListView" Margin="10" MaxHeight="200">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="과목명" DisplayMemberBinding="{Binding TaskName}" Width="200"/>
+                                <GridViewColumn Header="평균 집중도" DisplayMemberBinding="{Binding AverageFocusScore, StringFormat={}{0:F2}}" Width="100"/>
+                                <GridViewColumn Header="총 학습 시간" DisplayMemberBinding="{Binding TotalTimeFormatted}" Width="150"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
+            </Border>
+
+            <!-- 시간대별 분석 차트 -->
+            <Border Style="{StaticResource PanelBorderStyle}">
+                <StackPanel>
+                    <TextBlock Text="시간대별 학습량" Style="{StaticResource HeaderTextStyle}" Margin="0,0,0,10"/>
+                    <lvc:CartesianChart Series="{Binding HourAnalysisSeries}" LegendLocation="Right" Height="250">
+                        <lvc:CartesianChart.AxisX>
+                            <lvc:Axis Title="시간" Labels="{Binding HourLabels}"/>
+                        </lvc:CartesianChart.AxisX>
+                        <lvc:CartesianChart.AxisY>
+                            <lvc:Axis Title="학습량 (분)" LabelFormatter="{Binding YFormatter}"/>
+                        </lvc:CartesianChart.AxisY>
+                    </lvc:CartesianChart>
+                </StackPanel>
+            </Border>
+
+            <!-- AI 분석 및 조언 -->
+            <TextBlock Text="AI 분석 및 조언" Style="{StaticResource HeaderTextStyle}" Margin="0,15,0,10"/>
+            <Border Style="{StaticResource PanelBorderStyle}">
+                <StackPanel>
+                    <TextBlock Text="💡 당신의 황금 시간대는?" FontWeight="Bold"/>
+                    <TextBlock x:Name="GoldenTimeSuggestionTextBlock" Text="데이터를 분석 중입니다..." TextWrapping="Wrap" Margin="0,5,0,15"/>
+                    <TextBlock Text="💡 최적의 학습/휴식 패턴은?" FontWeight="Bold"/>
+                    <TextBlock x:Name="WorkRestPatternSuggestionTextBlock" Text="데이터를 분석 중입니다..." TextWrapping="Wrap" Margin="0,5,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- AI 집중도 예측 -->
+            <TextBlock Text="AI 집중도 예측" Style="{StaticResource HeaderTextStyle}" Margin="0,15,0,10"/>
+            <Border Style="{StaticResource PanelBorderStyle}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0" x:Name="TaskPredictionComboBox" Margin="0,0,5,0"/>
+                        <ComboBox Grid.Column="1" x:Name="DayOfWeekPredictionComboBox" Margin="0,0,5,0"/>
+                        <ComboBox Grid.Column="2" x:Name="HourPredictionComboBox" Margin="0,0,5,0"/>
+                        <Button Grid.Column="3" Content="예측하기" Click="PredictButton_Click"/>
+                    </Grid>
+                    <TextBlock x:Name="PredictionResultTextBlock" Text="" FontWeight="Bold" Margin="0,10,0,0"/>
                 </StackPanel>
             </Border>
         </StackPanel>

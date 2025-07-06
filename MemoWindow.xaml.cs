@@ -1,28 +1,34 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Windows;
 using System.Collections.ObjectModel;
-using System.Text.Json; // JSON 사용을 위해 추가
+using System.Text.Json;
 using System.Linq;
 using System.Windows.Controls;
+using System.Collections.Generic;
 
 namespace WorkPartner
 {
     public partial class MemoWindow : Window
     {
-        private readonly string _memoFilePath = "memos.json"; // 저장 파일 이름을 memos.json으로 변경
-        public ObservableCollection<MemoItem> Memos { get; set; }
-        private bool _isSaving = false; // 무한 루프 방지용 플래그
+        private readonly string _memoFilePath = "memos.json";
+        private ObservableCollection<MemoItem> _allMemos; // 모든 메모를 저장
+        public ObservableCollection<MemoItem> VisibleMemos { get; set; } // 화면에 보여줄 메모만 저장
+        private bool _isSaving = false;
 
         public MemoWindow()
         {
             InitializeComponent();
-            Memos = new ObservableCollection<MemoItem>();
-            MemoListBox.ItemsSource = Memos;
+            _allMemos = new ObservableCollection<MemoItem>();
+            VisibleMemos = new ObservableCollection<MemoItem>();
+            MemoListBox.ItemsSource = VisibleMemos;
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             LoadMemos();
+            MemoCalendar.SelectedDate = DateTime.Today; // 오늘 날짜를 기본으로 선택
+            FilterMemosByDate(DateTime.Today);
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -38,31 +44,49 @@ namespace WorkPartner
                 var loadedMemos = JsonSerializer.Deserialize<ObservableCollection<MemoItem>>(json);
                 if (loadedMemos != null)
                 {
-                    Memos = loadedMemos;
-                    MemoListBox.ItemsSource = Memos;
+                    _allMemos = loadedMemos;
                 }
             }
-            // 불러올 메모가 없으면 새 메모 하나를 기본으로 추가
-            if (!Memos.Any())
-            {
-                Memos.Add(new MemoItem());
-            }
-            MemoListBox.SelectedIndex = 0;
         }
 
         private void SaveMemos()
         {
-            var options = new JsonSerializerOptions { WriteIndented = true }; // JSON을 예쁘게 저장
-            var json = JsonSerializer.Serialize(Memos, options);
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            var json = JsonSerializer.Serialize(_allMemos, options);
             File.WriteAllText(_memoFilePath, json);
+        }
+
+        // [메서드 추가] 날짜에 따라 메모를 필터링
+        private void FilterMemosByDate(DateTime? selectedDate)
+        {
+            VisibleMemos.Clear();
+            if (selectedDate == null) return;
+
+            var filtered = _allMemos.Where(m => m.CreatedDate.Date == selectedDate.Value.Date).ToList();
+            foreach (var memo in filtered)
+            {
+                VisibleMemos.Add(memo);
+            }
+
+            if (VisibleMemos.Any())
+            {
+                MemoListBox.SelectedIndex = 0;
+            }
+            else // 해당 날짜에 메모가 없으면 내용 초기화
+            {
+                MemoTitleTextBox.Text = "";
+                MemoContentTextBox.Text = "";
+            }
         }
 
         private void NewMemoButton_Click(object sender, RoutedEventArgs e)
         {
-            var newMemo = new MemoItem { Title = "새 제목" }; // 기본 제목 설정
-            Memos.Add(newMemo);
+            var selectedDate = MemoCalendar.SelectedDate ?? DateTime.Today;
+            var newMemo = new MemoItem { Title = "새 제목", CreatedDate = selectedDate };
+            _allMemos.Add(newMemo);
+            VisibleMemos.Add(newMemo); // 현재 보이는 목록에도 추가
             MemoListBox.SelectedItem = newMemo;
-            MemoTitleTextBox.Focus(); // 제목 입력란에 바로 포커스
+            MemoTitleTextBox.Focus();
         }
 
         private void DeleteMemoButton_Click(object sender, RoutedEventArgs e)
@@ -71,12 +95,8 @@ namespace WorkPartner
             {
                 if (MessageBox.Show($"'{selectedMemo.Title}' 메모를 삭제하시겠습니까?", "삭제 확인", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                 {
-                    Memos.Remove(selectedMemo);
-                    if (!Memos.Any()) // 모든 메모가 삭제되었다면
-                    {
-                        Memos.Add(new MemoItem()); // 새 메모 추가
-                    }
-                    MemoListBox.SelectedIndex = 0;
+                    _allMemos.Remove(selectedMemo);
+                    VisibleMemos.Remove(selectedMemo); // 보이는 목록에서도 삭제
                 }
             }
         }
@@ -85,7 +105,6 @@ namespace WorkPartner
         {
             if (!_isSaving && MemoListBox.SelectedItem is MemoItem selectedMemo)
             {
-                // [로직 추가] 이제 제목과 내용을 모두 채워줍니다.
                 MemoTitleTextBox.Text = selectedMemo.Title;
                 MemoContentTextBox.Text = selectedMemo.Content;
             }
@@ -96,20 +115,30 @@ namespace WorkPartner
             if (MemoListBox.SelectedItem is MemoItem selectedMemo)
             {
                 _isSaving = true;
-                selectedMemo.Content = MemoContentTextBox.Text; // Content 속성 업데이트
+                selectedMemo.Content = MemoContentTextBox.Text;
                 _isSaving = false;
             }
         }
 
-        // [이벤트 핸들러 추가] 제목 텍스트박스의 내용이 바뀔 때
         private void MemoTitleTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (MemoListBox.SelectedItem is MemoItem selectedMemo)
             {
                 _isSaving = true;
-                selectedMemo.Title = MemoTitleTextBox.Text; // Title 속성 업데이트
+                selectedMemo.Title = MemoTitleTextBox.Text;
+                // [수정] 제목이 바뀌면 ListBox의 아이템도 실시간으로 새로고침
+                var temp = MemoListBox.SelectedItem;
+                MemoListBox.ItemsSource = null;
+                MemoListBox.ItemsSource = VisibleMemos;
+                MemoListBox.SelectedItem = temp;
                 _isSaving = false;
             }
+        }
+
+        // [이벤트 핸들러 추가] 달력 날짜 선택 변경 시
+        private void MemoCalendar_SelectedDatesChanged(object sender, SelectionChangedEventArgs e)
+        {
+            FilterMemosByDate(MemoCalendar.SelectedDate);
         }
     }
 }

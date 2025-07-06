@@ -41,6 +41,7 @@ namespace WorkPartner
         private void UpdateUIFromSettings()
         {
             IdleDetectionCheckBox.IsChecked = Settings.IsIdleDetectionEnabled;
+            MiniTimerCheckBox.IsChecked = Settings.IsMiniTimerEnabled; // [UI 로직 추가]
             IdleTimeoutTextBox.Text = Settings.IdleTimeoutSeconds.ToString();
             WorkProcessListBox.ItemsSource = Settings.WorkProcesses;
             PassiveProcessListBox.ItemsSource = Settings.PassiveProcesses;
@@ -52,8 +53,26 @@ namespace WorkPartner
             TagRulesListView.ItemsSource = Settings.TagRules;
         }
 
+        private void Setting_Changed(object sender, RoutedEventArgs e)
+        {
+            if (Settings == null) return;
+
+            // [수정] 어떤 체크박스가 변경되었는지 확인하고 해당 설정을 업데이트합니다.
+            if (sender == IdleDetectionCheckBox)
+            {
+                Settings.IsIdleDetectionEnabled = IdleDetectionCheckBox.IsChecked ?? true;
+            }
+            else if (sender == MiniTimerCheckBox)
+            {
+                Settings.IsMiniTimerEnabled = MiniTimerCheckBox.IsChecked ?? false;
+                // MainWindow에 있는 메서드를 호출하여 즉시 반영
+                (Application.Current.MainWindow as MainWindow)?.ToggleMiniTimer();
+            }
+
+            SaveSettings();
+        }
+
         // --- 기존 이벤트 핸들러 (생략) ---
-        private void Setting_Changed(object sender, RoutedEventArgs e) { if (Settings == null) return; Settings.IsIdleDetectionEnabled = IdleDetectionCheckBox.IsChecked ?? true; SaveSettings(); }
         private void Setting_Changed_IdleTimeout(object sender, TextChangedEventArgs e) { if (Settings == null) return; if (int.TryParse(IdleTimeoutTextBox.Text, out int timeout)) { Settings.IdleTimeoutSeconds = timeout; SaveSettings(); } }
         private void AddWorkProcessButton_Click(object sender, RoutedEventArgs e) { var newProcess = WorkProcessInputTextBox.Text.Trim().ToLower(); if (!string.IsNullOrEmpty(newProcess) && !Settings.WorkProcesses.Contains(newProcess)) { Settings.WorkProcesses.Add(newProcess); WorkProcessInputTextBox.Clear(); SaveSettings(); } }
         private void DeleteWorkProcessButton_Click(object sender, RoutedEventArgs e) { if (WorkProcessListBox.SelectedItem is string selectedProcess) { Settings.WorkProcesses.Remove(selectedProcess); SaveSettings(); } }

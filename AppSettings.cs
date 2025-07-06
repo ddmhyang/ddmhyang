@@ -16,6 +16,9 @@ namespace WorkPartner
         public Dictionary<string, string> TagRules { get; set; }
         public int Coins { get; set; }
 
+        public bool IsMiniTimerEnabled { get; set; }
+
+
         // [속성 추가] 사용자가 구매한 아이템의 ID를 저장할 목록입니다.
         public List<Guid> OwnedItemIds { get; set; }
 
@@ -46,6 +49,9 @@ namespace WorkPartner
 
             // [추가] 커스텀 색상 Dictionary 초기화
             CustomColors = new Dictionary<ItemType, string>();
+
+            IsMiniTimerEnabled = false; // 기본값은 비활성화
+
 
 
         }
