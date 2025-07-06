@@ -251,56 +251,95 @@ namespace WorkPartner
         // [수정] RenderTimeTable 메서드 개선
         private void RenderTimeTable()
         {
-            TimeTableCanvas.Children.Clear();
+            TimeTableContainer.Children.Clear();
 
-            // 시간 눈금선 그리기
-            for (int i = 0; i < 24; i++)
+            var todayLogs = TimeLogEntries.Where(log => log.StartTime.Date == DateTime.Today.Date).ToList();
+
+            // 24시간을 세로로 반복
+            for (int hour = 0; hour < 24; hour++)
             {
-                var line = new Line { X1 = 35, Y1 = i * 60, X2 = TimeTableCanvas.ActualWidth, Y2 = i * 60, Stroke = Brushes.LightGray, StrokeThickness = (i % 6 == 0) ? 1 : 0.5 };
-                var txt = new TextBlock { Text = $"{i:00}:00", Foreground = Brushes.Gray, FontSize = 10 };
-                Canvas.SetTop(line, i * 60);
-                Canvas.SetLeft(line, 0);
-                Canvas.SetTop(txt, i * 60 - 7);
-                Canvas.SetLeft(txt, 0);
-                TimeTableCanvas.Children.Add(line);
-                TimeTableCanvas.Children.Add(txt);
-            }
-
-            // 시간 기록 막대 그리기
-            foreach (var entry in TimeLogEntries.Where(log => log.StartTime.Date == DateTime.Today.Date).Reverse())
-            {
-                double top = entry.StartTime.TimeOfDay.TotalMinutes;
-                double h = Math.Max(1, entry.Duration.TotalMinutes);
-
-                SolidColorBrush taskColor = GetColorForTask(entry.TaskText);
-
-                var rect = new Border
+                // 각 시간을 위한 가로 패널 생성
+                var hourRowPanel = new StackPanel
                 {
-                    Height = h,
-                    Width = Math.Max(10, TimeTableCanvas.ActualWidth - 50),
-                    Background = taskColor,
-                    CornerRadius = new CornerRadius(3), // 모서리를 둥글게
-                    ToolTip = new ToolTip { Content = $"{entry.TaskText}\n{entry.StartTime:HH:mm} ~ {entry.EndTime:HH:mm}" },
-                    Tag = entry
+                    Orientation = Orientation.Horizontal,
+                    Margin = new Thickness(0, 1, 0, 1)
                 };
 
-                // 막대 내부에 텍스트 추가
-                if (h > 15) // 막대가 너무 작으면 텍스트를 표시하지 않음
+                // 1. 시간 레이블 추가
+                var hourLabel = new TextBlock
                 {
-                    rect.Child = new TextBlock
+                    Text = $"{hour:00}",
+                    Width = 30,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextAlignment = TextAlignment.Center,
+                    Foreground = Brushes.Gray
+                };
+                hourRowPanel.Children.Add(hourLabel);
+
+                // 2. 해당 시간의 10분 블록 6개를 가로로 추가
+                for (int minuteBlock = 0; minuteBlock < 6; minuteBlock++)
+                {
+                    var blockStartTime = new TimeSpan(hour, minuteBlock * 10, 0);
+                    var blockEndTime = blockStartTime.Add(TimeSpan.FromMinutes(10));
+
+                    // [수정] 10분 블록을 담을 Grid 컨테이너 생성
+                    var blockContainer = new Grid
                     {
-                        Text = entry.TaskText,
-                        Foreground = Brushes.Black,
-                        FontSize = 10,
-                        Margin = new Thickness(5, 2, 5, 2),
-                        TextTrimming = TextTrimming.CharacterEllipsis
+                        Width = 60,
+                        Height = 20,
+                        Background = new SolidColorBrush(Color.FromRgb(0xF5, 0xF5, 0xF5)),
+                        Margin = new Thickness(1, 0, 1, 0)
                     };
+
+                    // 이 10분 블록과 겹치는 모든 로그를 찾음
+                    var overlappingLogs = todayLogs.Where(log =>
+                        log.StartTime.TimeOfDay < blockEndTime && log.EndTime.TimeOfDay > blockStartTime
+                    ).ToList();
+
+                    foreach (var logEntry in overlappingLogs)
+                    {
+                        // 블록 내에서 로그가 실제로 차지하는 시작과 끝 시간을 계산
+                        var segmentStart = logEntry.StartTime.TimeOfDay > blockStartTime ? logEntry.StartTime.TimeOfDay : blockStartTime;
+                        var segmentEnd = logEntry.EndTime.TimeOfDay < blockEndTime ? logEntry.EndTime.TimeOfDay : blockEndTime;
+
+                        var segmentDuration = segmentEnd - segmentStart;
+
+                        // 실제 시간에 비례하여 막대의 너비와 위치를 계산
+                        double totalBlockWidth = blockContainer.Width;
+                        double barWidth = (segmentDuration.TotalMinutes / 10.0) * totalBlockWidth;
+                        double leftOffset = ((segmentStart - blockStartTime).TotalMinutes / 10.0) * totalBlockWidth;
+
+                        if (barWidth < 1) continue; // 너무 작은 조각은 그리지 않음
+
+                        var coloredBar = new Border
+                        {
+                            Width = barWidth,
+                            Height = blockContainer.Height,
+                            Background = GetColorForTask(logEntry.TaskText),
+                            CornerRadius = new CornerRadius(2),
+                            HorizontalAlignment = HorizontalAlignment.Left,
+                            Margin = new Thickness(leftOffset, 0, 0, 0),
+                            ToolTip = new ToolTip { Content = $"{logEntry.TaskText}\n{logEntry.StartTime:HH:mm} ~ {logEntry.EndTime:HH:mm}" },
+                            Tag = logEntry,
+                            Cursor = Cursors.Hand
+                        };
+                        coloredBar.MouseLeftButtonDown += TimeLogRect_MouseLeftButtonDown;
+
+                        blockContainer.Children.Add(coloredBar);
+                    }
+
+                    // 테두리를 포함한 최종 블록을 패널에 추가
+                    var blockWithBorder = new Border
+                    {
+                        BorderBrush = Brushes.White,
+                        BorderThickness = new Thickness(1, 0, (minuteBlock + 1) % 6 == 0 ? 1 : 0, 0),
+                        Child = blockContainer
+                    };
+
+                    hourRowPanel.Children.Add(blockWithBorder);
                 }
 
-                rect.MouseLeftButtonDown += TimeLogRect_MouseLeftButtonDown;
-                Canvas.SetTop(rect, top);
-                Canvas.SetLeft(rect, 40);
-                TimeTableCanvas.Children.Add(rect);
+                TimeTableContainer.Children.Add(hourRowPanel);
             }
         }
 

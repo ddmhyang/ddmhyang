@@ -15,21 +15,14 @@ namespace WorkPartner
         public int FocusModeNagIntervalSeconds { get; set; }
         public Dictionary<string, string> TagRules { get; set; }
         public int Coins { get; set; }
-
-        public bool IsMiniTimerEnabled { get; set; }
-
-
-        // [속성 추가] 사용자가 구매한 아이템의 ID를 저장할 목록입니다.
         public List<Guid> OwnedItemIds { get; set; }
-
-        //어떤 아이템을 착용했는지
         public Dictionary<ItemType, Guid> EquippedItems { get; set; }
-
-        // [추가] 사용자가 직접 만든 커스텀 색상을 부위별로 저장하는 Dictionary 입니다.
-        // 예를 들어, Key는 ItemType.HairColor, Value는 색상 Hex 코드("#RRGGBB")가 됩니다.
         public Dictionary<ItemType, string> CustomColors { get; set; }
 
-
+        /// <summary>
+        /// [속성 추가] 미니 타이머(항상 위) 기능 활성화 여부
+        /// </summary>
+        public bool IsMiniTimerEnabled { get; set; }
 
         public AppSettings()
         {
@@ -43,17 +36,9 @@ namespace WorkPartner
             TagRules = new Dictionary<string, string>();
             Coins = 0;
             OwnedItemIds = new List<Guid>();
-
-            // [추가] 착용 아이템 ID 초기화
             EquippedItems = new Dictionary<ItemType, Guid>();
-
-            // [추가] 커스텀 색상 Dictionary 초기화
             CustomColors = new Dictionary<ItemType, string>();
-
             IsMiniTimerEnabled = false; // 기본값은 비활성화
-
-
-
         }
     }
 }

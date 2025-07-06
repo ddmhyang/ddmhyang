@@ -28,9 +28,9 @@ namespace WorkPartner
             _closetPage = new ClosetPage();
 
             PageContent.Content = _dashboardPage;
-            // [수정] 버튼 객체를 직접 전달하도록 변경
             UpdateNavButtonSelection(DashboardButton);
 
+            // 프로그램 시작 시 설정에 따라 미니 타이머를 켭니다.
             ToggleMiniTimer();
         }
 
@@ -94,12 +94,15 @@ namespace WorkPartner
                 {
                     _miniTimerWindow = new MiniTimerWindow();
                     _miniTimerWindow.Show();
+                    // 대시보드 페이지가 이미 로드되었다면, 참조를 다시 설정해줍니다.
+                    _dashboardPage?.SetMiniTimerReference(_miniTimerWindow);
                 }
             }
             else
             {
                 _miniTimerWindow?.Close();
                 _miniTimerWindow = null;
+                _dashboardPage?.SetMiniTimerReference(null);
             }
         }
 
