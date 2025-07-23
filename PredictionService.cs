@@ -13,8 +13,9 @@ namespace WorkPartner.AI
 {
     public class PredictionService
     {
-        private readonly string _timeLogFilePath = DataManager.TimeLogFilePath; // 추가
-        private string _modelPath = DataManager.ModelFilePath;
+        private readonly string _timeLogFilePath = DataManager.TimeLogFilePath;
+        private string _modelPath = DataManager.ModelFilePath; // AI 훈련 시 경로가 바뀔 수 있으므로 readonly 제거
+
         private MLContext _mlContext;
         private ITransformer _model;
 

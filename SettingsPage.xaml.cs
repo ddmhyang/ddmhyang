@@ -12,6 +12,7 @@ namespace WorkPartner
     public partial class SettingsPage : UserControl
     {
         private readonly string _settingsFilePath = DataManager.SettingsFilePath;
+
         public AppSettings Settings { get; set; }
 
         public SettingsPage()
@@ -39,7 +40,6 @@ namespace WorkPartner
 
             var options = new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
             var json = JsonSerializer.Serialize(Settings, options);
-
             File.WriteAllText(_settingsFilePath, json);
         }
 

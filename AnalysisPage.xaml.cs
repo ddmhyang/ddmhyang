@@ -16,8 +16,8 @@ namespace WorkPartner
 {
     public partial class AnalysisPage : UserControl
     {
-        private readonly string _timeLogFilePath = "timelogs.json";
-        private readonly string _tasksFilePath = "tasks.json";
+        private readonly string _timeLogFilePath = DataManager.TimeLogFilePath;
+        private readonly string _tasksFilePath = DataManager.TasksFilePath;
         private List<TimeLogEntry> _allTimeLogs;
         private PredictionService _predictionService;
 

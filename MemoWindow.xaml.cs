@@ -11,7 +11,7 @@ namespace WorkPartner
 {
     public partial class MemoWindow : Window
     {
-        private readonly string _memoFilePath = "memos.json";
+        private readonly string _memoFilePath = DataManager.MemosFilePath;
         private ObservableCollection<MemoItem> _allMemos; // 모든 메모를 저장
         public ObservableCollection<MemoItem> VisibleMemos { get; set; } // 화면에 보여줄 메모만 저장
         private bool _isSaving = false;

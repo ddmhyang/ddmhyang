@@ -20,10 +20,10 @@ namespace WorkPartner
     public partial class DashboardPage : UserControl
     {
         #region 변수 선언
-        private readonly string _tasksFilePath = "tasks.json";
-        private readonly string _todosFilePath = "todos.json";
-        private readonly string _timeLogFilePath = "timelogs.json";
-        private readonly string _settingsFilePath = "app_settings.json";
+        private readonly string _tasksFilePath = DataManager.TasksFilePath;
+        private readonly string _todosFilePath = DataManager.TodosFilePath;
+        private readonly string _timeLogFilePath = DataManager.TimeLogFilePath;
+        private readonly string _settingsFilePath = DataManager.SettingsFilePath;
         public ObservableCollection<TaskItem> TaskItems { get; set; }
         public ObservableCollection<TodoItem> TodoItems { get; set; }
         public ObservableCollection<TimeLogEntry> TimeLogEntries { get; set; }

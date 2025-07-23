@@ -10,8 +10,8 @@ namespace WorkPartner
 {
     public partial class ShopPage : UserControl
     {
-        private readonly string _settingsFilePath = "app_settings.json";
-        private readonly string _itemsDbFilePath = "items_db.json"; // [추가] 아이템 DB 파일 경로
+        private readonly string _settingsFilePath = DataManager.SettingsFilePath;
+        private readonly string _itemsDbFilePath = DataManager.ItemsDbFilePath;
         private AppSettings _settings;
         private List<ShopItem> _shopInventory;
 
