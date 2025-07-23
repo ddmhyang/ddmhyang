@@ -120,27 +120,28 @@ namespace WorkPartner
 
                         if (tabContainer != null)
                         {
-                            // [수정] 탭 컨테이너의 '직계 자식'이 아닌 '모든 후손' 중에서 탭 아이템을 찾도록 변경
                             var tabItems = tabContainer.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem));
 
                             foreach (AutomationElement tabItem in tabItems)
                             {
+                                // 새로운 로직 시작: 기존 잘못된 로직을 이 위치에서 제거하고 아래 코드로 대체하세요.
                                 string tabTitle = tabItem.Current.Name;
                                 if (browserProcessName == "chrome") tabTitle = tabTitle.Replace(" - Google Chrome", "");
                                 else if (browserProcessName == "msedge") tabTitle = tabTitle.Replace(" - Microsoft Edge", "");
                                 else if (browserProcessName == "whale") tabTitle = tabTitle.Replace(" - Naver Whale", "");
 
-                                // 현재 코드: 탭 제목을 기반으로 키워드 추출 시도
-                                if (!string.IsNullOrWhiteSpace(tabTitle) && !tabTitle.Equals("새 탭") && !tabTitle.StartsWith("tab-") && addedTitles.Add(tabTitle))
+                                string url = GetBrowserTabUrlForTabItem(tabItem); // <-- CS0103 오류를 해결하기 위해 이 메서드를 구현해야 합니다.
+
+                                if (!string.IsNullOrWhiteSpace(url) && addedTitles.Add(tabTitle))
                                 {
                                     try
                                     {
-                                        string urlKeyword = new Uri("http://" + tabTitle.Split(' ')[0]).Host.ToLower();
+                                        string urlKeyword = new Uri(url).Host.ToLower();
                                         tabs.Add((tabTitle, urlKeyword));
                                     }
                                     catch (UriFormatException)
                                     {
-                                        tabs.Add((tabTitle, tabTitle.ToLower()));
+                                        // URL 형식이 유효하지 않은 경우
                                     }
                                 }
                             }
@@ -152,7 +153,7 @@ namespace WorkPartner
             return tabs;
         }
 
-        private static List<IntPtr> GetWindowHandlesForProcess(int processId)
+    private static List<IntPtr> GetWindowHandlesForProcess(int processId)
         {
             var windowHandles = new List<IntPtr>();
             GCHandle gcHandles = GCHandle.Alloc(windowHandles);
