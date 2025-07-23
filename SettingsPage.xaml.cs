@@ -200,6 +200,60 @@ namespace WorkPartner
             }
             catch { return null; }
         }
+        // SettingsPage.xaml.cs 클래스 내부 아무 곳에나 추가
+
+        private void SelectRunningAppButton_Click(object sender, RoutedEventArgs e)
+        {
+            // 1. 실행 중인 앱 목록 가져오기
+            var runningApps = Process.GetProcesses()
+                                     .Where(p => !string.IsNullOrEmpty(p.MainWindowTitle))
+                                     .Select(p => p.ProcessName.ToLower())
+                                     .Distinct()
+                                     .OrderBy(name => name)
+                                     .ToList();
+
+            if (!runningApps.Any())
+            {
+                MessageBox.Show("목록에 표시할 실행 중인 프로그램이 없습니다.");
+                return;
+            }
+
+            // 2. AppSelectionWindow를 띄웁니다.
+            var selectionWindow = new AppSelectionWindow(runningApps)
+            {
+                Owner = Window.GetWindow(this)
+            };
+
+            if (selectionWindow.ShowDialog() == true)
+            {
+                string selectedApp = selectionWindow.SelectedAppName;
+                if (string.IsNullOrEmpty(selectedApp)) return;
+
+                // 3. 어떤 버튼을 눌렀는지 Tag로 구분하여 해당 목록에 추가합니다.
+                string targetList = (sender as Button)?.Tag as string;
+
+                if (targetList == "Work" && !Settings.WorkProcesses.Contains(selectedApp))
+                {
+                    Settings.WorkProcesses.Add(selectedApp);
+                    WorkProcessListBox.ItemsSource = null;
+                    WorkProcessListBox.ItemsSource = Settings.WorkProcesses;
+                }
+                else if (targetList == "Passive" && !Settings.PassiveProcesses.Contains(selectedApp))
+                {
+                    Settings.PassiveProcesses.Add(selectedApp);
+                    PassiveProcessListBox.ItemsSource = null;
+                    PassiveProcessListBox.ItemsSource = Settings.PassiveProcesses;
+                }
+                else if (targetList == "Distraction" && !Settings.DistractionProcesses.Contains(selectedApp))
+                {
+                    Settings.DistractionProcesses.Add(selectedApp);
+                    DistractionProcessListBox.ItemsSource = null;
+                    DistractionProcessListBox.ItemsSource = Settings.DistractionProcesses;
+                }
+
+                SaveSettings(); // 변경사항 저장
+            }
+        }
         #endregion
 
         #region 기존 버튼 이벤트 핸들러

@@ -66,6 +66,7 @@
                                 </ListBox>
                             </Border>
                         </Popup>
+                        <Button Content="실행 중인 앱 목록 보기" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Work"/>
                         <Button Content="추가" Click="AddWorkProcessButton_Click" Margin="0,5"/>
                         <ListBox x:Name="WorkProcessListBox" Height="100"/>
                     </StackPanel>
@@ -87,6 +88,7 @@
                                 </ListBox>
                             </Border>
                         </Popup>
+                        <Button Content="실행 중인 앱 목록 보기" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Passive"/>
                         <Button Content="추가" Click="AddPassiveProcessButton_Click" Margin="0,5"/>
                         <ListBox x:Name="PassiveProcessListBox" Height="100"/>
                     </StackPanel>
@@ -108,6 +110,7 @@
                                 </ListBox>
                             </Border>
                         </Popup>
+                        <Button Content="실행 중인 앱 목록 보기" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Distraction"/>
                         <Button Content="추가" Click="AddDistractionProcessButton_Click" Margin="0,5"/>
                         <ListBox x:Name="DistractionProcessListBox" Height="100"/>
                     </StackPanel>
