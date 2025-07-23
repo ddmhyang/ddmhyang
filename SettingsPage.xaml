@@ -51,21 +51,63 @@
 
                     <StackPanel Grid.Column="0" Margin="0,0,10,0">
                         <TextBlock Text="작업 프로그램" FontWeight="Bold"/>
-                        <TextBox x:Name="WorkProcessInputTextBox"/>
+                        <TextBox x:Name="WorkProcessInputTextBox" TextChanged="ProcessInputTextBox_TextChanged" LostFocus="ProcessInputTextBox_LostFocus" ToolTip="프로그램 이름을 입력하여 검색하세요."/>
+                        <Popup x:Name="WorkProcessPopup" IsOpen="False" StaysOpen="False" PlacementTarget="{Binding ElementName=WorkProcessInputTextBox}" MaxHeight="200">
+                            <Border BorderBrush="Gray" BorderThickness="1" Background="White">
+                                <ListBox x:Name="WorkProcessSuggestionListBox" SelectionChanged="SuggestionListBox_SelectionChanged">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,5,0"/>
+                                                <TextBlock Text="{Binding DisplayName}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Border>
+                        </Popup>
                         <Button Content="추가" Click="AddWorkProcessButton_Click" Margin="0,5"/>
                         <ListBox x:Name="WorkProcessListBox" Height="100"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Margin="5,0">
                         <TextBlock Text="수동 프로그램" FontWeight="Bold"/>
-                        <TextBox x:Name="PassiveProcessInputTextBox"/>
+                        <TextBox x:Name="PassiveProcessInputTextBox" TextChanged="ProcessInputTextBox_TextChanged" LostFocus="ProcessInputTextBox_LostFocus" ToolTip="프로그램 이름을 입력하여 검색하세요."/>
+                        <Popup x:Name="PassiveProcessPopup" IsOpen="False" StaysOpen="False" PlacementTarget="{Binding ElementName=PassiveProcessInputTextBox}" MaxHeight="200">
+                            <Border BorderBrush="Gray" BorderThickness="1" Background="White">
+                                <ListBox x:Name="PassiveProcessSuggestionListBox" SelectionChanged="SuggestionListBox_SelectionChanged">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,5,0"/>
+                                                <TextBlock Text="{Binding DisplayName}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Border>
+                        </Popup>
                         <Button Content="추가" Click="AddPassiveProcessButton_Click" Margin="0,5"/>
                         <ListBox x:Name="PassiveProcessListBox" Height="100"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="2" Margin="10,0,0,0">
                         <TextBlock Text="방해 프로그램" FontWeight="Bold"/>
-                        <TextBox x:Name="DistractionProcessInputTextBox"/>
+                        <TextBox x:Name="DistractionProcessInputTextBox" TextChanged="ProcessInputTextBox_TextChanged" LostFocus="ProcessInputTextBox_LostFocus" ToolTip="프로그램 이름을 입력하여 검색하세요."/>
+                        <Popup x:Name="DistractionProcessPopup" IsOpen="False" StaysOpen="False" PlacementTarget="{Binding ElementName=DistractionProcessInputTextBox}" MaxHeight="200">
+                            <Border BorderBrush="Gray" BorderThickness="1" Background="White">
+                                <ListBox x:Name="DistractionProcessSuggestionListBox" SelectionChanged="SuggestionListBox_SelectionChanged">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,5,0"/>
+                                                <TextBlock Text="{Binding DisplayName}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Border>
+                        </Popup>
                         <Button Content="추가" Click="AddDistractionProcessButton_Click" Margin="0,5"/>
                         <ListBox x:Name="DistractionProcessListBox" Height="100"/>
                     </StackPanel>

@@ -140,6 +140,8 @@
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Drawing.Design" />
     <Reference Include="System.IO.Pipelines, Version=9.0.0.6, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.IO.Pipelines.9.0.6\lib\net462\System.IO.Pipelines.dll</HintPath>
     </Reference>
@@ -210,6 +212,9 @@
     <Compile Include="AnalysisPage.xaml.cs">
       <DependentUpon>AnalysisPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="AppSelectionWindow.xaml.cs">
+      <DependentUpon>AppSelectionWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="AppSettings.cs" />
     <Compile Include="BreakActivityWindow.xaml.cs">
       <DependentUpon>BreakActivityWindow.xaml</DependentUpon>
@@ -224,6 +229,7 @@
     <Compile Include="InputWindow.xaml.cs">
       <DependentUpon>InputWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="InstalledProgram.cs" />
     <Compile Include="MiniTimerWindow.xaml.cs">
       <DependentUpon>MiniTimerWindow.xaml</DependentUpon>
     </Compile>
@@ -249,6 +255,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="AnalysisPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="AppSelectionWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
