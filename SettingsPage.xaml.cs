@@ -226,15 +226,26 @@ namespace WorkPartner
                     // 2. 브라우저인 경우, 모든 탭을 '웹사이트' 목록에 추가
                     if (browserProcesses.Contains(processName))
                     {
-                        var tabs = ActiveWindowHelper.GetBrowserTabInfos(process);
-                        foreach (var tab in tabs)
+                        foreach (var browserName in browserProcesses)
                         {
-                            if (!websitesAndFiles.Any(w => w.DisplayName == tab.Title))
+                            var tabs = ActiveWindowHelper.GetBrowserTabInfos(browserName);
+                            foreach (var tab in tabs)
                             {
-                                websitesAndFiles.Add(new InstalledProgram { DisplayName = tab.Title, ProcessName = tab.Url, Icon = GetIcon(executablePath) });
+                                // 중복되지 않은 탭만 추가
+                                if (!websites.Any(w => w.DisplayName == tab.Title))
+                                {
+                                    // 아이콘은 해당 브라우저의 아이콘을 가져옵니다.
+                                    var browserProcess = Process.GetProcessesByName(browserName).FirstOrDefault();
+                                    if (browserProcess != null)
+                                    {
+                                        websites.Add(new InstalledProgram { DisplayName = tab.Title, ProcessName = tab.UrlKeyword, Icon = GetIcon(browserProcess.MainModule.FileName) });
+                                    }
+                                }
                             }
                         }
                     }
+                    var sortedApps = allRunningApps.OrderBy(p => p.DisplayName).ToList();
+
                     // 3. 파일 탐색기인 경우, 열려있는 폴더 경로를 목록에 추가
                     else if (processName == "explorer")
                     {

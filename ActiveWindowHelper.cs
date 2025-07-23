@@ -95,28 +95,52 @@ namespace WorkPartner
             return null;
         }
 
-        public static List<(string Title, string UrlKeyword)> GetBrowserTabInfos(Process browserProcess)
+        // ActiveWindowHelper.cs
+
+        public static List<(string Title, string UrlKeyword)> GetBrowserTabInfos(string browserProcessName)
         {
             var tabs = new List<(string Title, string UrlKeyword)>();
-            if (browserProcess == null || browserProcess.MainWindowHandle == IntPtr.Zero) return tabs;
-            try
+            var addedTitles = new HashSet<string>(); // 중복 탭 제목 추가 방지
+
+            // 이름이 같은 모든 브라우저 프로세스를 찾습니다 (예: 모든 'msedge' 프로세스).
+            var processes = Process.GetProcessesByName(browserProcessName);
+
+            foreach (var process in processes)
             {
-                var rootElement = AutomationElement.FromHandle(browserProcess.MainWindowHandle);
-                if (rootElement == null) return tabs;
+                if (process.MainWindowHandle == IntPtr.Zero) continue;
 
-                var tabItems = rootElement.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem));
-
-                foreach (AutomationElement tabItem in tabItems)
+                try
                 {
-                    string tabTitle = tabItem.Current.Name.Replace(" - Google Chrome", "").Replace(" - Microsoft Edge", "").Replace(" - Naver Whale", "");
-                    if (!string.IsNullOrWhiteSpace(tabTitle) && !tabTitle.Equals("새 탭"))
+                    var rootElement = AutomationElement.FromHandle(process.MainWindowHandle);
+                    if (rootElement == null) continue;
+
+                    // 각 창의 탭 항목을 찾습니다.
+                    var tabItems = rootElement.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem));
+
+                    foreach (AutomationElement tabItem in tabItems)
                     {
-                        string urlKeyword = new Uri("http://" + tabTitle.Split(' ')[0]).Host.ToLower();
-                        tabs.Add((tabTitle, urlKeyword));
+                        string tabTitle = tabItem.Current.Name;
+
+                        // " - Google Chrome" 같은 브라우저 이름 부분을 제거합니다.
+                        if (browserProcessName == "chrome") tabTitle = tabTitle.Replace(" - Google Chrome", "");
+                        else if (browserProcessName == "msedge") tabTitle = tabTitle.Replace(" - Microsoft Edge", "");
+                        else if (browserProcessName == "whale") tabTitle = tabTitle.Replace(" - Naver Whale", "");
+
+                        // "새 탭", "tab-", 비어있는 제목 등 의미 없는 항목과 중복된 제목을 걸러냅니다.
+                        if (!string.IsNullOrWhiteSpace(tabTitle) &&
+                            !tabTitle.Equals("새 탭") &&
+                            !tabTitle.StartsWith("tab-") &&
+                            addedTitles.Add(tabTitle))
+                        {
+                            // 간단한 URL 추출 (도메인만 키워드로 사용)
+                            string urlKeyword = new Uri("http://" + tabTitle.Split(' ')[0]).Host.ToLower();
+                            tabs.Add((tabTitle, urlKeyword));
+                        }
                     }
                 }
+                catch (Exception) { /* 오류 무시 */ }
             }
-            catch { }
+
             return tabs;
         }
 
