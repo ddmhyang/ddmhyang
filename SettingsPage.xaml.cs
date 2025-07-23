@@ -20,7 +20,7 @@ namespace WorkPartner
     {
         private readonly string _settingsFilePath = DataManager.SettingsFilePath;
         public AppSettings Settings { get; set; }
-        private List<InstalledProgram> _allPrograms; // 설치된 프로그램 + 실행 중인 프로그램 목록
+        private List<InstalledProgram> _allPrograms;
         private TextBox _currentTextBox;
 
         public SettingsPage()
@@ -50,23 +50,10 @@ namespace WorkPartner
             var (popup, suggestionListBox) = GetControlsForTextBox(_currentTextBox);
             if (popup == null) return;
 
-            if (string.IsNullOrWhiteSpace(searchText))
-            {
-                popup.IsOpen = false;
-                return;
-            }
+            if (string.IsNullOrWhiteSpace(searchText)) { popup.IsOpen = false; return; }
 
             var suggestions = _allPrograms.Where(p => p.DisplayName.ToLower().Contains(searchText) || p.ProcessName.ToLower().Contains(searchText)).ToList();
-
-            if (suggestions.Any())
-            {
-                suggestionListBox.ItemsSource = suggestions;
-                popup.IsOpen = true;
-            }
-            else
-            {
-                popup.IsOpen = false;
-            }
+            if (suggestions.Any()) { suggestionListBox.ItemsSource = suggestions; popup.IsOpen = true; } else { popup.IsOpen = false; }
         }
 
         private void SuggestionListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -83,10 +70,7 @@ namespace WorkPartner
         private void ProcessInputTextBox_LostFocus(object sender, RoutedEventArgs e)
         {
             var popup = GetControlsForTextBox(sender as TextBox).Popup;
-            if (popup != null && !popup.IsMouseOver)
-            {
-                popup.IsOpen = false;
-            }
+            if (popup != null && !popup.IsMouseOver) popup.IsOpen = false;
         }
 
         private (Popup Popup, ListBox ListBox) GetControlsForTextBox(TextBox textBox)
@@ -118,44 +102,35 @@ namespace WorkPartner
                 try
                 {
                     using (var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view))
+                    using (var key = baseKey.OpenSubKey(registryPath))
                     {
-                        using (var key = baseKey.OpenSubKey(registryPath))
+                        if (key == null) continue;
+                        foreach (string subkeyName in key.GetSubKeyNames())
                         {
-                            if (key == null) continue;
-                            foreach (string subkeyName in key.GetSubKeyNames())
+                            using (RegistryKey subkey = key.OpenSubKey(subkeyName))
                             {
-                                using (RegistryKey subkey = key.OpenSubKey(subkeyName))
-                                {
-                                    if (subkey == null) continue;
-                                    var displayName = subkey.GetValue("DisplayName") as string;
-                                    var iconPath = subkey.GetValue("DisplayIcon") as string;
-                                    var systemComponent = subkey.GetValue("SystemComponent") as int?;
+                                if (subkey == null) continue;
+                                var displayName = subkey.GetValue("DisplayName") as string;
+                                var iconPath = subkey.GetValue("DisplayIcon") as string;
+                                var systemComponent = subkey.GetValue("SystemComponent") as int?;
 
-                                    if (!string.IsNullOrWhiteSpace(displayName) && systemComponent != 1)
+                                if (!string.IsNullOrWhiteSpace(displayName) && systemComponent != 1)
+                                {
+                                    string executablePath = GetExecutablePathFromIconPath(iconPath);
+                                    if (string.IsNullOrEmpty(executablePath)) continue;
+                                    string processName = Path.GetFileNameWithoutExtension(executablePath).ToLower();
+                                    if (!programs.ContainsKey(processName))
                                     {
-                                        string executablePath = GetExecutablePathFromIconPath(iconPath);
-                                        if (string.IsNullOrEmpty(executablePath)) continue;
-                                        string processName = Path.GetFileNameWithoutExtension(executablePath).ToLower();
-                                        if (!programs.ContainsKey(processName))
-                                        {
-                                            // UI 스레드에서 아이콘을 생성하도록 경로만 저장
-                                            programs[processName] = new InstalledProgram
-                                            {
-                                                DisplayName = displayName,
-                                                ProcessName = processName,
-                                                IconPath = executablePath
-                                            };
-                                        }
+                                        programs[processName] = new InstalledProgram { DisplayName = displayName, ProcessName = processName, IconPath = executablePath };
                                     }
                                 }
                             }
                         }
                     }
                 }
-                catch (Exception) { /* 레지스트리 접근 오류 무시 */ }
+                catch { }
             }
 
-            // 아이콘 생성은 UI 스레드에 위임
             Application.Current.Dispatcher.Invoke(() =>
             {
                 foreach (var program in programs.Values)
@@ -182,10 +157,7 @@ namespace WorkPartner
             {
                 using (Icon icon = Icon.ExtractAssociatedIcon(filePath))
                 {
-                    return Imaging.CreateBitmapSourceFromHIcon(
-                        icon.Handle,
-                        Int32Rect.Empty,
-                        BitmapSizeOptions.FromEmptyOptions());
+                    return Imaging.CreateBitmapSourceFromHIcon(icon.Handle, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
                 }
             }
             catch { return null; }
@@ -193,17 +165,11 @@ namespace WorkPartner
         #endregion
 
         #region 버튼 이벤트 핸들러
-        // SettingsPage.xaml.cs
-
-        // SettingsPage.xaml.cs
-
-        // SettingsPage.xaml.cs
-
         private void SelectRunningAppButton_Click(object sender, RoutedEventArgs e)
         {
-            var regularApps = new List<InstalledProgram>();
-            var websitesAndFiles = new List<InstalledProgram>();
-            var browserProcesses = new HashSet<string> { "chrome", "msedge", "firefox", "whale" };
+            var allRunningApps = new List<InstalledProgram>();
+            var websites = new List<InstalledProgram>();
+            var browserProcesses = new HashSet<string> { "chrome", "msedge", "whale" };
             var addedProcesses = new HashSet<string>();
 
             var runningProcesses = Process.GetProcesses().Where(p => !string.IsNullOrEmpty(p.MainWindowTitle));
@@ -213,81 +179,46 @@ namespace WorkPartner
                 try
                 {
                     string processName = process.ProcessName.ToLower();
-                    string windowTitle = process.MainWindowTitle;
-                    string executablePath = process.MainModule.FileName;
-
-                    // 1. 모든 프로그램을 '전체 프로그램' 목록에 추가
                     if (!addedProcesses.Contains(processName))
                     {
-                        regularApps.Add(new InstalledProgram { DisplayName = windowTitle, ProcessName = processName, Icon = GetIcon(executablePath) });
+                        allRunningApps.Add(new InstalledProgram { DisplayName = process.MainWindowTitle, ProcessName = processName, Icon = GetIcon(process.MainModule.FileName) });
                         addedProcesses.Add(processName);
                     }
-
-                    // 2. 브라우저인 경우, 모든 탭을 '웹사이트' 목록에 추가
-                    if (browserProcesses.Contains(processName))
-                    {
-                        foreach (var browserName in browserProcesses)
-                        {
-                            var tabs = ActiveWindowHelper.GetBrowserTabInfos(browserName);
-                            foreach (var tab in tabs)
-                            {
-                                // 중복되지 않은 탭만 추가
-                                if (!websites.Any(w => w.DisplayName == tab.Title))
-                                {
-                                    // 아이콘은 해당 브라우저의 아이콘을 가져옵니다.
-                                    var browserProcess = Process.GetProcessesByName(browserName).FirstOrDefault();
-                                    if (browserProcess != null)
-                                    {
-                                        websites.Add(new InstalledProgram { DisplayName = tab.Title, ProcessName = tab.UrlKeyword, Icon = GetIcon(browserProcess.MainModule.FileName) });
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    var sortedApps = allRunningApps.OrderBy(p => p.DisplayName).ToList();
-
-                    // 3. 파일 탐색기인 경우, 열려있는 폴더 경로를 목록에 추가
-                    else if (processName == "explorer")
-                    {
-                        // (이 부분은 더 복잡한 로직이 필요하여 추후 구현 가능합니다)
-                        // 현재는 탐색기 자체만 표시됩니다.
-                    }
                 }
-                catch (Exception) { /* 접근 권한 없는 프로세스 무시 */ }
+                catch { }
             }
 
-            var sortedApps = regularApps.OrderBy(p => p.DisplayName).ToList();
-            var sortedWebsites = websitesAndFiles.OrderBy(p => p.DisplayName).ToList();
+            foreach (var browserName in browserProcesses)
+            {
+                var tabs = ActiveWindowHelper.GetBrowserTabInfos(browserName);
+                foreach (var tab in tabs)
+                {
+                    if (!websites.Any(w => w.DisplayName == tab.Title))
+                    {
+                        var browserProcess = Process.GetProcessesByName(browserName).FirstOrDefault();
+                        if (browserProcess != null)
+                        {
+                            websites.Add(new InstalledProgram { DisplayName = tab.Title, ProcessName = tab.UrlKeyword, Icon = GetIcon(browserProcess.MainModule.FileName) });
+                        }
+                    }
+                }
+            }
+
+            var sortedApps = allRunningApps.OrderBy(p => p.DisplayName).ToList();
+            var sortedWebsites = websites.OrderBy(p => p.DisplayName).ToList();
+
+            if (!sortedApps.Any()) { MessageBox.Show("목록에 표시할 실행 중인 프로그램이 없습니다."); return; }
 
             var selectionWindow = new AppSelectionWindow(sortedApps, sortedWebsites) { Owner = Window.GetWindow(this) };
-
             if (selectionWindow.ShowDialog() == true)
             {
                 string selectedKeyword = selectionWindow.SelectedAppKeyword;
                 if (string.IsNullOrEmpty(selectedKeyword)) return;
-
                 string targetList = (sender as Button)?.Tag as string;
                 if (targetList == "Work") WorkProcessInputTextBox.Text = selectedKeyword;
                 else if (targetList == "Passive") PassiveProcessInputTextBox.Text = selectedKeyword;
                 else if (targetList == "Distraction") DistractionProcessInputTextBox.Text = selectedKeyword;
             }
-        }
-
-        // 창 제목에서 사이트 이름을 추출하는 도우미 메서드 (클래스 내부에 추가)
-        private string ParseSiteNameFromTitle(string title)
-        {
-            title = title.Replace(" - Google Chrome", "")
-                         .Replace(" - Microsoft​ Edge", "")
-                         .Replace(" — Mozilla Firefox", "")
-                         .Replace(" - Naver Whale", "");
-
-            if (title.Equals("New Tab", StringComparison.OrdinalIgnoreCase) ||
-                title.Equals("새 탭", StringComparison.OrdinalIgnoreCase) ||
-                string.IsNullOrWhiteSpace(title))
-            {
-                return null;
-            }
-            return title.Trim();
         }
 
         private void AddWorkProcessButton_Click(object sender, RoutedEventArgs e) { var newProcess = WorkProcessInputTextBox.Text.Trim().ToLower(); if (!string.IsNullOrEmpty(newProcess) && !Settings.WorkProcesses.Contains(newProcess)) { Settings.WorkProcesses.Add(newProcess); WorkProcessInputTextBox.Clear(); SaveSettings(); WorkProcessListBox.ItemsSource = null; WorkProcessListBox.ItemsSource = Settings.WorkProcesses; } }
