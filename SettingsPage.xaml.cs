@@ -193,22 +193,90 @@ namespace WorkPartner
         #endregion
 
         #region 버튼 이벤트 핸들러
+        // SettingsPage.xaml.cs
+
+        // SettingsPage.xaml.cs
+
+        // SettingsPage.xaml.cs
+
         private void SelectRunningAppButton_Click(object sender, RoutedEventArgs e)
         {
-            var runningApps = Process.GetProcesses().Where(p => !string.IsNullOrEmpty(p.MainWindowTitle)).Select(p => p.ProcessName.ToLower()).Distinct().OrderBy(name => name).ToList();
-            if (!runningApps.Any()) { MessageBox.Show("목록에 표시할 실행 중인 프로그램이 없습니다."); return; }
-            var selectionWindow = new AppSelectionWindow(runningApps) { Owner = Window.GetWindow(this) };
+            var regularApps = new List<InstalledProgram>();
+            var websitesAndFiles = new List<InstalledProgram>();
+            var browserProcesses = new HashSet<string> { "chrome", "msedge", "firefox", "whale" };
+            var addedProcesses = new HashSet<string>();
+
+            var runningProcesses = Process.GetProcesses().Where(p => !string.IsNullOrEmpty(p.MainWindowTitle));
+
+            foreach (var process in runningProcesses)
+            {
+                try
+                {
+                    string processName = process.ProcessName.ToLower();
+                    string windowTitle = process.MainWindowTitle;
+                    string executablePath = process.MainModule.FileName;
+
+                    // 1. 모든 프로그램을 '전체 프로그램' 목록에 추가
+                    if (!addedProcesses.Contains(processName))
+                    {
+                        regularApps.Add(new InstalledProgram { DisplayName = windowTitle, ProcessName = processName, Icon = GetIcon(executablePath) });
+                        addedProcesses.Add(processName);
+                    }
+
+                    // 2. 브라우저인 경우, 모든 탭을 '웹사이트' 목록에 추가
+                    if (browserProcesses.Contains(processName))
+                    {
+                        var tabs = ActiveWindowHelper.GetBrowserTabInfos(process);
+                        foreach (var tab in tabs)
+                        {
+                            if (!websitesAndFiles.Any(w => w.DisplayName == tab.Title))
+                            {
+                                websitesAndFiles.Add(new InstalledProgram { DisplayName = tab.Title, ProcessName = tab.Url, Icon = GetIcon(executablePath) });
+                            }
+                        }
+                    }
+                    // 3. 파일 탐색기인 경우, 열려있는 폴더 경로를 목록에 추가
+                    else if (processName == "explorer")
+                    {
+                        // (이 부분은 더 복잡한 로직이 필요하여 추후 구현 가능합니다)
+                        // 현재는 탐색기 자체만 표시됩니다.
+                    }
+                }
+                catch (Exception) { /* 접근 권한 없는 프로세스 무시 */ }
+            }
+
+            var sortedApps = regularApps.OrderBy(p => p.DisplayName).ToList();
+            var sortedWebsites = websitesAndFiles.OrderBy(p => p.DisplayName).ToList();
+
+            var selectionWindow = new AppSelectionWindow(sortedApps, sortedWebsites) { Owner = Window.GetWindow(this) };
 
             if (selectionWindow.ShowDialog() == true)
             {
-                string selectedApp = selectionWindow.SelectedAppName;
-                if (string.IsNullOrEmpty(selectedApp)) return;
-                string targetList = (sender as Button)?.Tag as string;
+                string selectedKeyword = selectionWindow.SelectedAppKeyword;
+                if (string.IsNullOrEmpty(selectedKeyword)) return;
 
-                if (targetList == "Work") WorkProcessInputTextBox.Text = selectedApp;
-                else if (targetList == "Passive") PassiveProcessInputTextBox.Text = selectedApp;
-                else if (targetList == "Distraction") DistractionProcessInputTextBox.Text = selectedApp;
+                string targetList = (sender as Button)?.Tag as string;
+                if (targetList == "Work") WorkProcessInputTextBox.Text = selectedKeyword;
+                else if (targetList == "Passive") PassiveProcessInputTextBox.Text = selectedKeyword;
+                else if (targetList == "Distraction") DistractionProcessInputTextBox.Text = selectedKeyword;
             }
+        }
+
+        // 창 제목에서 사이트 이름을 추출하는 도우미 메서드 (클래스 내부에 추가)
+        private string ParseSiteNameFromTitle(string title)
+        {
+            title = title.Replace(" - Google Chrome", "")
+                         .Replace(" - Microsoft​ Edge", "")
+                         .Replace(" — Mozilla Firefox", "")
+                         .Replace(" - Naver Whale", "");
+
+            if (title.Equals("New Tab", StringComparison.OrdinalIgnoreCase) ||
+                title.Equals("새 탭", StringComparison.OrdinalIgnoreCase) ||
+                string.IsNullOrWhiteSpace(title))
+            {
+                return null;
+            }
+            return title.Trim();
         }
 
         private void AddWorkProcessButton_Click(object sender, RoutedEventArgs e) { var newProcess = WorkProcessInputTextBox.Text.Trim().ToLower(); if (!string.IsNullOrEmpty(newProcess) && !Settings.WorkProcesses.Contains(newProcess)) { Settings.WorkProcesses.Add(newProcess); WorkProcessInputTextBox.Clear(); SaveSettings(); WorkProcessListBox.ItemsSource = null; WorkProcessListBox.ItemsSource = Settings.WorkProcesses; } }

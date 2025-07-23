@@ -1,87 +1,136 @@
-﻿using System;
+﻿// ActiveWindowHelper.cs (기존 내용을 모두 지우고 아래 코드로 교체)
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows.Automation;
 
 namespace WorkPartner
 {
     public static class ActiveWindowHelper
     {
-        // Windows API 함수를 C#에서 사용하기 위한 선언
+        #region Windows API Imports
         [DllImport("user32.dll")]
         private static extern IntPtr GetForegroundWindow();
 
         [DllImport("user32.dll", SetLastError = true)]
-        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 
-        /// <summary>
-        /// 현재 활성화된 창의 프로세스 이름을 가져옵니다. (예: "chrome", "devenv")
-        /// </summary>
-        public static string GetActiveProcessName()
-        {
-            try
-            {
-                IntPtr handle = GetForegroundWindow(); // 활성화된 창의 핸들(ID) 가져오기
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
-                GetWindowThreadProcessId(handle, out uint processId); // 핸들로 프로세스 ID 가져오기
-                Process process = Process.GetProcessById((int)processId); // 프로세스 ID로 프로세스 객체 가져오기
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern int GetWindowTextLength(IntPtr hWnd);
 
-                // "Idle" 프로세스는 실제 사용 프로그램이 아니므로 제외
-                if (process.ProcessName.ToLower() == "idle")
-                {
-                    return "unknown";
-                }
-
-                return process.ProcessName.ToLower(); // 프로세스 이름을 소문자로 반환
-            }
-            catch
-            {
-                return "unknown"; // 오류 발생 시 "unknown" 반환
-            }
-
-        }
-        // ActiveWindowHelper.cs 파일 내부
-
-        // ... GetActiveProcessName() 함수는 그대로 둡니다 ...
-
-        // [코드 추가] -----------------------------------------------------------------
-
-        // 마지막 입력 정보를 위한 구조체
         [StructLayout(LayoutKind.Sequential)]
-        private struct LASTINPUTINFO
-        {
-            public static readonly int SizeOf = Marshal.SizeOf(typeof(LASTINPUTINFO));
-            [MarshalAs(UnmanagedType.U4)]
-            public UInt32 cbSize;
-            [MarshalAs(UnmanagedType.U4)]
-            public UInt32 dwTime;
-        }
+        private struct LASTINPUTINFO { public static readonly int SizeOf = Marshal.SizeOf(typeof(LASTINPUTINFO)); [MarshalAs(UnmanagedType.U4)] public UInt32 cbSize; [MarshalAs(UnmanagedType.U4)] public UInt32 dwTime; }
 
-        // Windows API 함수 선언
         [DllImport("user32.dll")]
         private static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
 
         [DllImport("kernel32.dll")]
         private static extern uint GetTickCount();
+        #endregion
 
-        /// <summary>
-        /// 사용자가 아무 입력(키보드, 마우스)이 없었던 유휴 시간을 TimeSpan 형태로 가져옵니다.
-        /// </summary>
+        public static string GetActiveProcessName()
+        {
+            try
+            {
+                IntPtr handle = GetForegroundWindow();
+                GetWindowThreadProcessId(handle, out uint processId);
+                Process process = Process.GetProcessById((int)processId);
+                if (process.ProcessName.ToLower() == "idle") return "unknown";
+                return process.ProcessName.ToLower();
+            }
+            catch { return "unknown"; }
+        }
+
+        public static string GetActiveWindowTitle()
+        {
+            try
+            {
+                IntPtr handle = GetForegroundWindow();
+                int length = GetWindowTextLength(handle) + 1;
+                StringBuilder sb = new StringBuilder(length);
+                GetWindowText(handle, sb, length);
+                return sb.ToString();
+            }
+            catch { return "unknown"; }
+        }
+
+        public static string GetActiveBrowserTabUrl()
+        {
+            try
+            {
+                IntPtr handle = GetForegroundWindow();
+                if (handle == IntPtr.Zero) return null;
+                GetWindowThreadProcessId(handle, out uint processId);
+                var process = Process.GetProcessById((int)processId);
+
+                if (process.ProcessName.ToLower() != "chrome" && process.ProcessName.ToLower() != "msedge") return null;
+
+                var element = AutomationElement.FromHandle(handle);
+                if (element == null) return null;
+
+                var addressBar = element.FindFirst(TreeScope.Subtree,
+                    new AndCondition(
+                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
+                        new PropertyCondition(AutomationElement.NameProperty, "주소창 및 검색창")
+                    ));
+
+                if (addressBar == null)
+                {
+                    addressBar = element.FindFirst(TreeScope.Descendants,
+                       new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
+                }
+
+                if (addressBar != null && addressBar.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
+                {
+                    return ((ValuePattern)pattern).Current.Value as string;
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        public static List<(string Title, string UrlKeyword)> GetBrowserTabInfos(Process browserProcess)
+        {
+            var tabs = new List<(string Title, string UrlKeyword)>();
+            if (browserProcess == null || browserProcess.MainWindowHandle == IntPtr.Zero) return tabs;
+            try
+            {
+                var rootElement = AutomationElement.FromHandle(browserProcess.MainWindowHandle);
+                if (rootElement == null) return tabs;
+
+                var tabItems = rootElement.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem));
+
+                foreach (AutomationElement tabItem in tabItems)
+                {
+                    string tabTitle = tabItem.Current.Name.Replace(" - Google Chrome", "").Replace(" - Microsoft Edge", "").Replace(" - Naver Whale", "");
+                    if (!string.IsNullOrWhiteSpace(tabTitle) && !tabTitle.Equals("새 탭"))
+                    {
+                        string urlKeyword = new Uri("http://" + tabTitle.Split(' ')[0]).Host.ToLower();
+                        tabs.Add((tabTitle, urlKeyword));
+                    }
+                }
+            }
+            catch { }
+            return tabs;
+        }
+
         public static TimeSpan GetIdleTime()
         {
             LASTINPUTINFO lastInputInfo = new LASTINPUTINFO();
             lastInputInfo.cbSize = (uint)Marshal.SizeOf(lastInputInfo);
-
             if (GetLastInputInfo(ref lastInputInfo))
             {
-                // 시스템 부팅 후 경과 시간과 마지막 입력 시간의 차이를 계산
                 uint lastInputTick = lastInputInfo.dwTime;
                 uint idleTime = GetTickCount() - lastInputTick;
                 return TimeSpan.FromMilliseconds(idleTime);
             }
-
-            return TimeSpan.Zero; // 오류 발생 시 0 반환
+            return TimeSpan.Zero;
         }
-        // -------------------------------------------------------------------------
     }
 }
