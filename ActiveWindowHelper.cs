@@ -26,6 +26,15 @@ namespace WorkPartner
         private static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
         [DllImport("kernel32.dll")]
         private static extern uint GetTickCount();
+
+        // [추가] 윈도우 열거를 위한 P/Invoke
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool IsWindowVisible(IntPtr hWnd);
         #endregion
 
         public static string GetActiveProcessName()
@@ -89,6 +98,7 @@ namespace WorkPartner
             return null;
         }
 
+        // [수정] GetBrowserTabInfos 메서드
         public static List<(string Title, string UrlKeyword)> GetBrowserTabInfos(string browserProcessName)
         {
             var tabs = new List<(string Title, string UrlKeyword)>();
@@ -97,30 +107,72 @@ namespace WorkPartner
 
             foreach (var process in processes)
             {
-                if (process.MainWindowHandle == IntPtr.Zero) continue;
-                try
+                // [수정] MainWindowHandle 대신 모든 창을 가져옵니다.
+                List<IntPtr> windowHandles = GetWindowHandlesForProcess(process.Id);
+
+                foreach (var handle in windowHandles)
                 {
-                    var rootElement = AutomationElement.FromHandle(process.MainWindowHandle);
-                    if (rootElement == null) continue;
-                    var tabItems = rootElement.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem));
-
-                    foreach (AutomationElement tabItem in tabItems)
+                    try
                     {
-                        string tabTitle = tabItem.Current.Name;
-                        if (browserProcessName == "chrome") tabTitle = tabTitle.Replace(" - Google Chrome", "");
-                        else if (browserProcessName == "msedge") tabTitle = tabTitle.Replace(" - Microsoft Edge", "");
-                        else if (browserProcessName == "whale") tabTitle = tabTitle.Replace(" - Naver Whale", "");
+                        var rootElement = AutomationElement.FromHandle(handle);
+                        if (rootElement == null) continue;
 
-                        if (!string.IsNullOrWhiteSpace(tabTitle) && !tabTitle.Equals("새 탭") && !tabTitle.StartsWith("tab-") && addedTitles.Add(tabTitle))
+                        var tabItems = rootElement.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem));
+
+                        foreach (AutomationElement tabItem in tabItems)
                         {
-                            string urlKeyword = new Uri("http://" + tabTitle.Split(' ')[0]).Host.ToLower();
-                            tabs.Add((tabTitle, urlKeyword));
+                            string tabTitle = tabItem.Current.Name;
+                            if (browserProcessName == "chrome") tabTitle = tabTitle.Replace(" - Google Chrome", "");
+                            else if (browserProcessName == "msedge") tabTitle = tabTitle.Replace(" - Microsoft Edge", "");
+                            else if (browserProcessName == "whale") tabTitle = tabTitle.Replace(" - Naver Whale", "");
+
+                            if (!string.IsNullOrWhiteSpace(tabTitle) && !tabTitle.Equals("새 탭") && !tabTitle.StartsWith("tab-") && addedTitles.Add(tabTitle))
+                            {
+                                try
+                                {
+                                    string urlKeyword = new Uri("http://" + tabTitle.Split(' ')[0]).Host.ToLower();
+                                    tabs.Add((tabTitle, urlKeyword));
+                                }
+                                catch (UriFormatException)
+                                {
+                                    // URL 형식이 아닌 경우(예: 설정 페이지) 대비
+                                    tabs.Add((tabTitle, tabTitle.ToLower()));
+                                }
+                            }
                         }
                     }
+                    catch { }
                 }
-                catch { }
             }
             return tabs;
+        }
+
+        // [추가] 특정 프로세스에 속한 모든 창 핸들을 가져오는 도우미 메서드
+        private static List<IntPtr> GetWindowHandlesForProcess(int processId)
+        {
+            var windowHandles = new List<IntPtr>();
+            GCHandle gcHandles = GCHandle.Alloc(windowHandles);
+            try
+            {
+                EnumWindows(new EnumWindowsProc((hWnd, lParam) =>
+                {
+                    GetWindowThreadProcessId(hWnd, out uint windowProcessId);
+                    if (windowProcessId == processId && IsWindowVisible(hWnd) && GetWindowTextLength(hWnd) > 0)
+                    {
+                        var list = GCHandle.FromIntPtr(lParam).Target as List<IntPtr>;
+                        list.Add(hWnd);
+                    }
+                    return true;
+                }), GCHandle.ToIntPtr(gcHandles));
+            }
+            finally
+            {
+                if (gcHandles.IsAllocated)
+                {
+                    gcHandles.Free();
+                }
+            }
+            return windowHandles;
         }
 
         public static TimeSpan GetIdleTime()
