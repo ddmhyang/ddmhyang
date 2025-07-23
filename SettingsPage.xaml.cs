@@ -12,7 +12,7 @@ using System.Windows.Media.Imaging;
 using System.ComponentModel;
 using System.Windows.Interop;
 using System.Diagnostics;
-using System.Windows.Controls.Primitives; // Popup을 위해 추가
+using System.Windows.Controls.Primitives;
 
 namespace WorkPartner
 {
@@ -29,7 +29,6 @@ namespace WorkPartner
             LoadSettings();
             UpdateUIFromSettings();
 
-            // 백그라운드에서 프로그램 목록을 미리 불러옵니다.
             BackgroundWorker worker = new BackgroundWorker();
             worker.DoWork += (s, e) => { _allPrograms = GetAllPrograms(); };
             worker.RunWorkerAsync();
@@ -107,54 +106,54 @@ namespace WorkPartner
         }
         #endregion
 
-        #region 프로그램 목록 및 아이콘 추출 로직 (안정화 버전)
+        #region 프로그램 목록 및 아이콘 추출 로직
         private List<InstalledProgram> GetAllPrograms()
         {
             var programs = new Dictionary<string, InstalledProgram>();
-
-            // 1. 설치된 프로그램 목록 가져오기
             string registryPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
             var registryViews = new[] { RegistryView.Registry32, RegistryView.Registry64 };
 
             foreach (var view in registryViews)
             {
-                using (var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view))
+                try
                 {
-                    using (var key = baseKey.OpenSubKey(registryPath))
+                    using (var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view))
                     {
-                        if (key == null) continue;
-                        foreach (string subkeyName in key.GetSubKeyNames())
+                        using (var key = baseKey.OpenSubKey(registryPath))
                         {
-                            using (RegistryKey subkey = key.OpenSubKey(subkeyName))
+                            if (key == null) continue;
+                            foreach (string subkeyName in key.GetSubKeyNames())
                             {
-                                if (subkey == null) continue;
-                                var displayName = subkey.GetValue("DisplayName") as string;
-                                var iconPath = subkey.GetValue("DisplayIcon") as string;
-                                var systemComponent = subkey.GetValue("SystemComponent") as int?;
-
-                                if (!string.IsNullOrWhiteSpace(displayName) && systemComponent != 1)
+                                using (RegistryKey subkey = key.OpenSubKey(subkeyName))
                                 {
-                                    string executablePath = GetExecutablePathFromIconPath(iconPath);
-                                    if (string.IsNullOrEmpty(executablePath)) continue;
+                                    if (subkey == null) continue;
+                                    var displayName = subkey.GetValue("DisplayName") as string;
+                                    var iconPath = subkey.GetValue("DisplayIcon") as string;
+                                    var systemComponent = subkey.GetValue("SystemComponent") as int?;
 
-                                    string processName = Path.GetFileNameWithoutExtension(executablePath).ToLower();
-                                    if (!programs.ContainsKey(processName))
+                                    if (!string.IsNullOrWhiteSpace(displayName) && systemComponent != 1)
                                     {
-                                        programs[processName] = new InstalledProgram
+                                        string executablePath = GetExecutablePathFromIconPath(iconPath);
+                                        if (string.IsNullOrEmpty(executablePath)) continue;
+                                        string processName = Path.GetFileNameWithoutExtension(executablePath).ToLower();
+                                        if (!programs.ContainsKey(processName))
                                         {
-                                            DisplayName = displayName,
-                                            ProcessName = processName,
-                                            Icon = GetIcon(executablePath)
-                                        };
+                                            programs[processName] = new InstalledProgram
+                                            {
+                                                DisplayName = displayName,
+                                                ProcessName = processName,
+                                                Icon = GetIcon(executablePath)
+                                            };
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
+                catch (Exception) { /* 레지스트리 접근 오류 무시 */ }
             }
 
-            // 2. 현재 실행 중인 프로그램 목록 가져오기
             var runningProcesses = Process.GetProcesses().Where(p => !string.IsNullOrEmpty(p.MainWindowTitle));
             foreach (var process in runningProcesses)
             {
@@ -188,78 +187,42 @@ namespace WorkPartner
 
         private BitmapSource GetIcon(string filePath)
         {
-            try
-            {
-                using (Icon icon = Icon.ExtractAssociatedIcon(filePath))
-                {
-                    return Imaging.CreateBitmapSourceFromHIcon(
-                        icon.Handle,
-                        Int32Rect.Empty,
-                        BitmapSizeOptions.FromEmptyOptions());
-                }
-            }
+            try { using (Icon icon = Icon.ExtractAssociatedIcon(filePath)) { return Imaging.CreateBitmapSourceFromHIcon(icon.Handle, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions()); } }
             catch { return null; }
         }
-        // SettingsPage.xaml.cs 클래스 내부 아무 곳에나 추가
+        #endregion
 
+        #region 버튼 이벤트 핸들러
+        // '실행 중인 앱 목록 보기' 버튼 공통 핸들러
         private void SelectRunningAppButton_Click(object sender, RoutedEventArgs e)
         {
-            // 1. 실행 중인 앱 목록 가져오기
-            var runningApps = Process.GetProcesses()
-                                     .Where(p => !string.IsNullOrEmpty(p.MainWindowTitle))
-                                     .Select(p => p.ProcessName.ToLower())
-                                     .Distinct()
-                                     .OrderBy(name => name)
-                                     .ToList();
-
-            if (!runningApps.Any())
-            {
-                MessageBox.Show("목록에 표시할 실행 중인 프로그램이 없습니다.");
-                return;
-            }
-
-            // 2. AppSelectionWindow를 띄웁니다.
-            var selectionWindow = new AppSelectionWindow(runningApps)
-            {
-                Owner = Window.GetWindow(this)
-            };
+            var runningApps = Process.GetProcesses().Where(p => !string.IsNullOrEmpty(p.MainWindowTitle)).Select(p => p.ProcessName.ToLower()).Distinct().OrderBy(name => name).ToList();
+            if (!runningApps.Any()) { MessageBox.Show("목록에 표시할 실행 중인 프로그램이 없습니다."); return; }
+            var selectionWindow = new AppSelectionWindow(runningApps) { Owner = Window.GetWindow(this) };
 
             if (selectionWindow.ShowDialog() == true)
             {
                 string selectedApp = selectionWindow.SelectedAppName;
                 if (string.IsNullOrEmpty(selectedApp)) return;
-
-                // 3. 어떤 버튼을 눌렀는지 Tag로 구분하여 해당 목록에 추가합니다.
                 string targetList = (sender as Button)?.Tag as string;
 
-                if (targetList == "Work" && !Settings.WorkProcesses.Contains(selectedApp))
-                {
-                    Settings.WorkProcesses.Add(selectedApp);
-                    WorkProcessListBox.ItemsSource = null;
-                    WorkProcessListBox.ItemsSource = Settings.WorkProcesses;
-                }
-                else if (targetList == "Passive" && !Settings.PassiveProcesses.Contains(selectedApp))
-                {
-                    Settings.PassiveProcesses.Add(selectedApp);
-                    PassiveProcessListBox.ItemsSource = null;
-                    PassiveProcessListBox.ItemsSource = Settings.PassiveProcesses;
-                }
-                else if (targetList == "Distraction" && !Settings.DistractionProcesses.Contains(selectedApp))
-                {
-                    Settings.DistractionProcesses.Add(selectedApp);
-                    DistractionProcessListBox.ItemsSource = null;
-                    DistractionProcessListBox.ItemsSource = Settings.DistractionProcesses;
-                }
-
-                SaveSettings(); // 변경사항 저장
+                if (targetList == "Work") WorkProcessInputTextBox.Text = selectedApp;
+                else if (targetList == "Passive") PassiveProcessInputTextBox.Text = selectedApp;
+                else if (targetList == "Distraction") DistractionProcessInputTextBox.Text = selectedApp;
             }
         }
-        #endregion
 
-        #region 기존 버튼 이벤트 핸들러
+        // 추가 버튼 핸들러
         private void AddWorkProcessButton_Click(object sender, RoutedEventArgs e) { var newProcess = WorkProcessInputTextBox.Text.Trim().ToLower(); if (!string.IsNullOrEmpty(newProcess) && !Settings.WorkProcesses.Contains(newProcess)) { Settings.WorkProcesses.Add(newProcess); WorkProcessInputTextBox.Clear(); SaveSettings(); WorkProcessListBox.ItemsSource = null; WorkProcessListBox.ItemsSource = Settings.WorkProcesses; } }
         private void AddPassiveProcessButton_Click(object sender, RoutedEventArgs e) { var newProcess = PassiveProcessInputTextBox.Text.Trim().ToLower(); if (!string.IsNullOrEmpty(newProcess) && !Settings.PassiveProcesses.Contains(newProcess)) { Settings.PassiveProcesses.Add(newProcess); PassiveProcessInputTextBox.Clear(); SaveSettings(); PassiveProcessListBox.ItemsSource = null; PassiveProcessListBox.ItemsSource = Settings.PassiveProcesses; } }
         private void AddDistractionProcessButton_Click(object sender, RoutedEventArgs e) { var newProcess = DistractionProcessInputTextBox.Text.Trim().ToLower(); if (!string.IsNullOrEmpty(newProcess) && !Settings.DistractionProcesses.Contains(newProcess)) { Settings.DistractionProcesses.Add(newProcess); DistractionProcessInputTextBox.Clear(); SaveSettings(); DistractionProcessListBox.ItemsSource = null; DistractionProcessListBox.ItemsSource = Settings.DistractionProcesses; } }
+
+        // 삭제 버튼 핸들러 (새로 추가)
+        private void DeleteWorkProcessButton_Click(object sender, RoutedEventArgs e) { if (WorkProcessListBox.SelectedItem is string selected) { Settings.WorkProcesses.Remove(selected); SaveSettings(); WorkProcessListBox.ItemsSource = null; WorkProcessListBox.ItemsSource = Settings.WorkProcesses; } }
+        private void DeletePassiveProcessButton_Click(object sender, RoutedEventArgs e) { if (PassiveProcessListBox.SelectedItem is string selected) { Settings.PassiveProcesses.Remove(selected); SaveSettings(); PassiveProcessListBox.ItemsSource = null; PassiveProcessListBox.ItemsSource = Settings.PassiveProcesses; } }
+        private void DeleteDistractionProcessButton_Click(object sender, RoutedEventArgs e) { if (DistractionProcessListBox.SelectedItem is string selected) { Settings.DistractionProcesses.Remove(selected); SaveSettings(); DistractionProcessListBox.ItemsSource = null; DistractionProcessListBox.ItemsSource = Settings.DistractionProcesses; } }
+
+        // 기타 설정 핸들러
         private void Setting_Changed(object sender, RoutedEventArgs e) { if (Settings == null) return; if (sender == IdleDetectionCheckBox) { Settings.IsIdleDetectionEnabled = IdleDetectionCheckBox.IsChecked ?? true; } else if (sender == MiniTimerCheckBox) { Settings.IsMiniTimerEnabled = MiniTimerCheckBox.IsChecked ?? false; (Application.Current.MainWindow as MainWindow)?.ToggleMiniTimer(); } SaveSettings(); }
         private void Setting_Changed_IdleTimeout(object sender, TextChangedEventArgs e) { if (Settings != null && int.TryParse(IdleTimeoutTextBox.Text, out int timeout)) { Settings.IdleTimeoutSeconds = timeout; SaveSettings(); } }
         private void NagMessageTextBox_TextChanged(object sender, TextChangedEventArgs e) { if (Settings != null) { Settings.FocusModeNagMessage = NagMessageTextBox.Text; SaveSettings(); } }

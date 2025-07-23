@@ -67,7 +67,14 @@
                             </Border>
                         </Popup>
                         <Button Content="실행 중인 앱 목록 보기" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Work"/>
-                        <Button Content="추가" Click="AddWorkProcessButton_Click" Margin="0,5"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="추가" Click="AddWorkProcessButton_Click" Margin="0,5,5,0"/>
+                            <Button Grid.Column="1" Content="삭제" Click="DeleteWorkProcessButton_Click" Margin="0,5,0,0" Background="#d9534f"/>
+                        </Grid>
                         <ListBox x:Name="WorkProcessListBox" Height="100"/>
                     </StackPanel>
 
@@ -89,7 +96,14 @@
                             </Border>
                         </Popup>
                         <Button Content="실행 중인 앱 목록 보기" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Passive"/>
-                        <Button Content="추가" Click="AddPassiveProcessButton_Click" Margin="0,5"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="추가" Click="AddPassiveProcessButton_Click" Margin="0,5,5,0"/>
+                            <Button Grid.Column="1" Content="삭제" Click="DeletePassiveProcessButton_Click" Margin="0,5,0,0" Background="#d9534f"/>
+                        </Grid>
                         <ListBox x:Name="PassiveProcessListBox" Height="100"/>
                     </StackPanel>
 
@@ -111,7 +125,14 @@
                             </Border>
                         </Popup>
                         <Button Content="실행 중인 앱 목록 보기" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Distraction"/>
-                        <Button Content="추가" Click="AddDistractionProcessButton_Click" Margin="0,5"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="추가" Click="AddDistractionProcessButton_Click" Margin="0,5,5,0"/>
+                            <Button Grid.Column="1" Content="삭제" Click="DeleteDistractionProcessButton_Click" Margin="0,5,0,0" Background="#d9534f"/>
+                        </Grid>
                         <ListBox x:Name="DistractionProcessListBox" Height="100"/>
                     </StackPanel>
                 </Grid>
