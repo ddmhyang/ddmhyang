@@ -1,45 +1,61 @@
 ﻿using System.Collections.Generic;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace WorkPartner
 {
     public partial class AppSelectionWindow : Window
     {
-        // 선택된 앱 이름을 저장할 속성
-        public string SelectedAppName { get; private set; }
+        public string SelectedAppKeyword { get; private set; }
 
-        // 생성자: 앱 이름 목록을 받아서 ListBox에 채웁니다.
-        public AppSelectionWindow(List<string> appNames)
+        // [수정] 생성자: 프로그램 리스트와 웹사이트 리스트를 별도로 받습니다.
+        public AppSelectionWindow(List<InstalledProgram> runningApps, List<InstalledProgram> websites)
         {
             InitializeComponent();
-            AppListBox.ItemsSource = appNames;
+            AppListBox.ItemsSource = runningApps;
+            WebsiteListBox.ItemsSource = websites;
         }
 
-        // '확인' 버튼 클릭 시
         private void OkButton_Click(object sender, RoutedEventArgs e)
         {
             ConfirmSelection();
         }
 
-        // 목록에서 항목을 더블 클릭 시
         private void AppListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             ConfirmSelection();
         }
 
-        // 선택을 확정하고 창을 닫는 공통 메서드
+        private void WebsiteListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            ConfirmSelection();
+        }
+
+        // [수정] 선택 로직: 어느 리스트에서 선택되었는지 확인하고 키워드를 반환합니다.
         private void ConfirmSelection()
         {
+            InstalledProgram selectedProgram = null;
+
             if (AppListBox.SelectedItem != null)
             {
-                SelectedAppName = AppListBox.SelectedItem.ToString();
-                this.DialogResult = true; // 성공적으로 선택했음을 알림
+                selectedProgram = AppListBox.SelectedItem as InstalledProgram;
+                SelectedAppKeyword = selectedProgram?.ProcessName;
+            }
+            else if (WebsiteListBox.SelectedItem != null)
+            {
+                selectedProgram = WebsiteListBox.SelectedItem as InstalledProgram;
+                SelectedAppKeyword = selectedProgram?.ProcessName; // 웹사이트의 경우 ProcessName에 URL 키워드가 저장됩니다.
+            }
+
+            if (selectedProgram != null)
+            {
+                this.DialogResult = true;
                 this.Close();
             }
             else
             {
-                MessageBox.Show("목록에서 프로그램을 선택해주세요.");
+                MessageBox.Show("목록에서 항목을 선택해주세요.");
             }
         }
     }

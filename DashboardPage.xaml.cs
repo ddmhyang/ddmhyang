@@ -210,18 +210,19 @@ namespace WorkPartner
             HandleStopwatchMode();
             CheckFocusAndSuggest();
 
-            // [추가] 집중 모드일 때 방해 프로그램 실행 감지
+            // [수정] 집중 모드일 때 방해 프로그램 실행 감지
             if (_isFocusModeActive)
             {
                 string activeProcess = ActiveWindowHelper.GetActiveProcessName();
                 string activeUrl = ActiveWindowHelper.GetActiveBrowserTabUrl();
                 string keywordToCheck = !string.IsNullOrEmpty(activeUrl) ? activeUrl : activeProcess;
 
-                bool isDistracted = Settings.DistractionProcesses.Any(p => keywordToCheck.Contains(p));
+                // [오류 수정] Settings -> _settings 로 변경
+                bool isDistracted = _settings.DistractionProcesses.Any(p => keywordToCheck.Contains(p));
 
-                if (isDistracted && (DateTime.Now - _lastNagTime).TotalSeconds > Settings.FocusModeNagIntervalSeconds)
+                if (isDistracted && (DateTime.Now - _lastNagTime).TotalSeconds > _settings.FocusModeNagIntervalSeconds)
                 {
-                    MessageBox.Show(Settings.FocusModeNagMessage, "집중!", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(_settings.FocusModeNagMessage, "집중!", MessageBoxButton.OK, MessageBoxImage.Warning);
                     _lastNagTime = DateTime.Now;
                 }
             }
