@@ -130,6 +130,7 @@ namespace WorkPartner
                                 else if (browserProcessName == "msedge") tabTitle = tabTitle.Replace(" - Microsoft Edge", "");
                                 else if (browserProcessName == "whale") tabTitle = tabTitle.Replace(" - Naver Whale", "");
 
+                                // 현재 코드: 탭 제목을 기반으로 키워드 추출 시도
                                 if (!string.IsNullOrWhiteSpace(tabTitle) && !tabTitle.Equals("새 탭") && !tabTitle.StartsWith("tab-") && addedTitles.Add(tabTitle))
                                 {
                                     try

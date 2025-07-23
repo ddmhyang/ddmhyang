@@ -9,7 +9,6 @@ namespace WorkPartner
     {
         public string SelectedAppKeyword { get; private set; }
 
-        // [수정] 생성자: 프로그램 리스트와 웹사이트 리스트를 별도로 받습니다.
         public AppSelectionWindow(List<InstalledProgram> runningApps, List<InstalledProgram> websites)
         {
             InitializeComponent();
@@ -32,7 +31,6 @@ namespace WorkPartner
             ConfirmSelection();
         }
 
-        // [수정] 선택 로직: 어느 리스트에서 선택되었는지 확인하고 키워드를 반환합니다.
         private void ConfirmSelection()
         {
             InstalledProgram selectedProgram = null;
@@ -45,7 +43,7 @@ namespace WorkPartner
             else if (WebsiteListBox.SelectedItem != null)
             {
                 selectedProgram = WebsiteListBox.SelectedItem as InstalledProgram;
-                SelectedAppKeyword = selectedProgram?.ProcessName; // 웹사이트의 경우 ProcessName에 URL 키워드가 저장됩니다.
+                SelectedAppKeyword = selectedProgram?.ProcessName;
             }
 
             if (selectedProgram != null)
