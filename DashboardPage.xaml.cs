@@ -47,6 +47,7 @@ namespace WorkPartner
         private MediaPlayer _bgmPlayer;
         private bool _isBgmPlaying = false;
         private DateTime _lastSuggestionTime;
+        private DateTime _currentDateForTimeline = DateTime.Today; // 타임라인에 표시할 날짜
         #endregion
 
         // [추가] 과목별 색상을 저장하기 위한 Dictionary와 색상 팔레트
@@ -253,7 +254,7 @@ namespace WorkPartner
         {
             TimeTableContainer.Children.Clear();
 
-            var todayLogs = TimeLogEntries.Where(log => log.StartTime.Date == DateTime.Today.Date).ToList();
+            var todayLogs = TimeLogEntries.Where(log => log.StartTime.Date == _currentDateForTimeline.Date).ToList();
 
             // 24시간을 세로로 반복
             for (int hour = 0; hour < 24; hour++)
@@ -343,7 +344,44 @@ namespace WorkPartner
             }
         }
 
+        // DashboardPage.xaml.cs 클래스 내부 아무 곳에나 추가
+
+        private void PrevDayButton_Click(object sender, RoutedEventArgs e)
+        {
+            _currentDateForTimeline = _currentDateForTimeline.AddDays(-1);
+            TimelineDatePicker.SelectedDate = _currentDateForTimeline; // 달력 날짜도 함께 변경
+            RenderTimeTable();
+            RecalculateAllTotals(); // 해당 날짜의 통계도 다시 계산
+        }
+
+        private void TodayButton_Click(object sender, RoutedEventArgs e)
+        {
+            _currentDateForTimeline = DateTime.Today;
+            TimelineDatePicker.SelectedDate = _currentDateForTimeline;
+            RenderTimeTable();
+            RecalculateAllTotals();
+        }
+
+        private void NextDayButton_Click(object sender, RoutedEventArgs e)
+        {
+            _currentDateForTimeline = _currentDateForTimeline.AddDays(1);
+            TimelineDatePicker.SelectedDate = _currentDateForTimeline;
+            RenderTimeTable();
+            RecalculateAllTotals();
+        }
+
+        private void TimelineDatePicker_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (TimelineDatePicker.SelectedDate.HasValue)
+            {
+                _currentDateForTimeline = TimelineDatePicker.SelectedDate.Value;
+                RenderTimeTable();
+                RecalculateAllTotals();
+            }
+        }
+
         private TodoItem FindParent(TodoItem currentParent, ObservableCollection<TodoItem> items, TodoItem target) { if (items.Contains(target)) return currentParent; foreach (var item in items) { var found = FindParent(item, item.SubTasks, target); if (found != null) return found; } return null; }
         #endregion
+
     }
 }

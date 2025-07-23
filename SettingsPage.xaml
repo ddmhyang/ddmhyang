@@ -112,6 +112,14 @@
                     </ListView>
                 </StackPanel>
             </Border>
+            <TextBlock Text="데이터 관리" Style="{StaticResource HeaderTextStyle}" Margin="0,25,0,10"/>
+            <Border Style="{StaticResource PanelBorderStyle}" Background="#FFF0F0">
+                <StackPanel>
+                    <TextBlock Text="경고: 이 작업은 되돌릴 수 없습니다!" FontWeight="Bold" Foreground="Red" Margin="0,0,0,10"/>
+                    <TextBlock Text="모든 시간 기록, 설정, 과목, 할 일, 코인, 아이템 등 모든 데이터가 영구적으로 삭제됩니다." TextWrapping="Wrap" Margin="0,0,0,15"/>
+                    <Button x:Name="ResetDataButton" Content="모든 데이터 초기화" Width="150" HorizontalAlignment="Right" Background="#D9534F" Click="ResetDataButton_Click"/>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

@@ -54,14 +54,22 @@
             </Grid>
 
             <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}" Margin="0,15,0,0">
-                <!-- [수정] StackPanel을 Grid로 변경 -->
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Text="타임라인" Style="{StaticResource HeaderTextStyle}"/>
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button Content="&lt; 어제" Click="PrevDayButton_Click" Style="{StaticResource SubtleButton}" Margin="0,0,5,0"/>
+                        <Button Content="오늘" Click="TodayButton_Click" Style="{StaticResource SubtleButton}" Margin="0,0,5,0"/>
+                        <Button Content="내일 &gt;" Click="NextDayButton_Click" Style="{StaticResource SubtleButton}" Margin="0,0,10,0"/>
+                        <DatePicker x:Name="TimelineDatePicker" SelectedDateChanged="TimelineDatePicker_SelectedDateChanged"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="1" Text="타임라인" Style="{StaticResource HeaderTextStyle}"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel x:Name="TimeTableContainer" Orientation="Vertical"/>
                     </ScrollViewer>
                 </Grid>

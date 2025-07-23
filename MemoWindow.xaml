@@ -15,6 +15,12 @@
             <TextBlock DockPanel.Dock="Top" Text="날짜 선택" FontWeight="Bold" Margin="5"/>
             <Calendar x:Name="MemoCalendar" DockPanel.Dock="Top" SelectedDatesChanged="MemoCalendar_SelectedDatesChanged"/>
 
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5">
+                <Button Content="&lt; 어제" Margin="0,0,10,0" Click="PrevDayButton_Click"/>
+                <Button Content="오늘" Click="TodayButton_Click"/>
+                <Button Content="내일 &gt;" Margin="10,0,0,0" Click="NextDayButton_Click"/>
+            </StackPanel>
+
             <TextBlock DockPanel.Dock="Top" Text="메모 목록" FontWeight="Bold" Margin="5,10,5,5"/>
             <ListBox x:Name="MemoListBox" ItemsSource="{Binding Memos}" SelectionChanged="MemoListBox_SelectionChanged" DisplayMemberPath="Title"/>
         </DockPanel>

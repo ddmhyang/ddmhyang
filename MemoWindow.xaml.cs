@@ -140,5 +140,31 @@ namespace WorkPartner
         {
             FilterMemosByDate(MemoCalendar.SelectedDate);
         }
+
+        // MemoWindow.xaml.cs 파일
+
+        // '어제' 버튼 클릭 시 실행될 메서드
+        private void PrevDayButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (MemoCalendar.SelectedDate.HasValue)
+            {
+                MemoCalendar.SelectedDate = MemoCalendar.SelectedDate.Value.AddDays(-1);
+            }
+        }
+
+        // '오늘' 버튼 클릭 시 실행될 메서드
+        private void TodayButton_Click(object sender, RoutedEventArgs e)
+        {
+            MemoCalendar.SelectedDate = DateTime.Today;
+        }
+
+        // '내일' 버튼 클릭 시 실행될 메서드
+        private void NextDayButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (MemoCalendar.SelectedDate.HasValue)
+            {
+                MemoCalendar.SelectedDate = MemoCalendar.SelectedDate.Value.AddDays(1);
+            }
+        }
     }
 }

@@ -14,8 +14,8 @@ namespace WorkPartner
 {
     public partial class ClosetPage : UserControl
     {
-        private readonly string _settingsFilePath = "app_settings.json";
-        private readonly string _itemsDbFilePath = "items_db.json";
+        private readonly string _settingsFilePath = DataManager.SettingsFilePath;
+        private readonly string _itemsDbFilePath = DataManager.ItemsDbFilePath;
         private AppSettings _settings;
         private List<ShopItem> _fullShopInventory;
 
