@@ -13,8 +13,8 @@ namespace WorkPartner.AI
 {
     public class PredictionService
     {
-        private readonly string _timeLogFilePath = "timelogs.json";
-        private readonly string _modelPath = "FocusPredictionModel.zip";
+        private readonly string _timeLogFilePath = DataManager.TimeLogFilePath; // 추가
+        private string _modelPath = DataManager.ModelFilePath;
         private MLContext _mlContext;
         private ITransformer _model;
 

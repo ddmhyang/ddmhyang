@@ -22,6 +22,9 @@ namespace WorkPartner
         public MainWindow()
         {
             InitializeComponent();
+
+            DataManager.PrepareFileForEditing("FocusPredictionModel.zip");
+
             _dashboardPage = new DashboardPage();
             _settingsPage = new SettingsPage();
             _analysisPage = new AnalysisPage();

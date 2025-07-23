@@ -11,7 +11,7 @@ namespace WorkPartner
 {
     public partial class SettingsPage : UserControl
     {
-        private readonly string _settingsFilePath = "app_settings.json";
+        private readonly string _settingsFilePath = DataManager.SettingsFilePath;
         public AppSettings Settings { get; set; }
 
         public SettingsPage()
@@ -36,15 +36,11 @@ namespace WorkPartner
 
         private void SaveSettings()
         {
-            string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            string myAppFolder = Path.Combine(appDataPath, "WorkPartner");
-            Directory.CreateDirectory(myAppFolder);
-            string correctSettingsFilePath = Path.Combine(myAppFolder, "settings.json"); 
 
             var options = new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
             var json = JsonSerializer.Serialize(Settings, options);
 
-            File.WriteAllText(correctSettingsFilePath, json);
+            File.WriteAllText(_settingsFilePath, json);
         }
 
         private void UpdateUIFromSettings()

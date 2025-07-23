@@ -13,8 +13,8 @@ namespace WorkPartner
 {
     public partial class CharacterDisplay : UserControl
     {
-        private readonly string _settingsFilePath = "app_settings.json";
-        private readonly string _itemsDbFilePath = "items_db.json";
+        private readonly string _settingsFilePath = DataManager.SettingsFilePath; // 추가
+        private readonly string _itemsDbFilePath = DataManager.ItemsDbFilePath;
         private AppSettings _settings;
         private List<ShopItem> _fullShopInventory;
 

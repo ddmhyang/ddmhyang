@@ -220,6 +220,7 @@
     <Compile Include="ClosetPage.xaml.cs">
       <DependentUpon>ClosetPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="DataManager.cs" />
     <Compile Include="InputWindow.xaml.cs">
       <DependentUpon>InputWindow.xaml</DependentUpon>
     </Compile>
