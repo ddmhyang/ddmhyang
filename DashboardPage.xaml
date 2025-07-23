@@ -76,9 +76,25 @@
             </Border>
 
             <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0">
-                <Button Content="수동 기록 추가" Click="AddManualLogButton_Click" Margin="5" Style="{StaticResource SubtleButton}"/>
-                <Button Content="메모장" Click="MemoButton_Click" Margin="5" Style="{StaticResource SubtleButton}"/>
-                <Button x:Name="BgmPlayButton" Content="백색 소음 재생" Click="BgmPlayButton_Click" Margin="5" Style="{StaticResource SubtleButton}"/>
+                <Button x:Name="FocusModeButton" 
+                        Content="집중 모드" 
+                        Click="FocusModeButton_Click" 
+                        Margin="5" 
+                        Style="{StaticResource SubtleButton}"
+                        ToolTip="방해 프로그램을 실행하면 경고 메시지를 표시합니다."/>
+                <Button Content="수동 기록 추가" 
+                        Click="AddManualLogButton_Click" 
+                        Margin="5" 
+                        Style="{StaticResource SubtleButton}"/>
+                <Button Content="메모장" 
+                        Click="MemoButton_Click" 
+                        Margin="5" 
+                        Style="{StaticResource SubtleButton}"/>
+                <Button x:Name="BgmPlayButton" 
+                        Content="백색 소음 재생" 
+                        Click="BgmPlayButton_Click" 
+                        Margin="5" 
+                        Style="{StaticResource SubtleButton}"/>
             </StackPanel>
 
             <Grid Grid.Row="4">

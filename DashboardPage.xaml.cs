@@ -14,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using WorkPartner.AI;
+using WorkPartner.Properties;
 
 namespace WorkPartner
 {
@@ -198,6 +199,7 @@ namespace WorkPartner
             _miniTimer = timer;
         }
 
+        // ✂️ 이 코드로 기존 Timer_Tick 메서드를 교체하세요 ✂️
         private void Timer_Tick(object sender, EventArgs e)
         {
             if (_stopwatch.IsRunning && _lastUnratedSession != null)
@@ -207,6 +209,22 @@ namespace WorkPartner
             }
             HandleStopwatchMode();
             CheckFocusAndSuggest();
+
+            // [추가] 집중 모드일 때 방해 프로그램 실행 감지
+            if (_isFocusModeActive)
+            {
+                string activeProcess = ActiveWindowHelper.GetActiveProcessName();
+                string activeUrl = ActiveWindowHelper.GetActiveBrowserTabUrl();
+                string keywordToCheck = !string.IsNullOrEmpty(activeUrl) ? activeUrl : activeProcess;
+
+                bool isDistracted = Settings.DistractionProcesses.Any(p => keywordToCheck.Contains(p));
+
+                if (isDistracted && (DateTime.Now - _lastNagTime).TotalSeconds > Settings.FocusModeNagIntervalSeconds)
+                {
+                    MessageBox.Show(Settings.FocusModeNagMessage, "집중!", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    _lastNagTime = DateTime.Now;
+                }
+            }
         }
 
         private void LogWorkSession()
@@ -485,6 +503,24 @@ namespace WorkPartner
 
         private TodoItem FindParent(TodoItem currentParent, ObservableCollection<TodoItem> items, TodoItem target) { if (items.Contains(target)) return currentParent; foreach (var item in items) { var found = FindParent(item, item.SubTasks, target); if (found != null) return found; } return null; }
         #endregion
+
+        // ✂️ 이 코드를 파일 맨 아래, 마지막 '}' 앞에 추가하세요 ✂️
+        private void FocusModeButton_Click(object sender, RoutedEventArgs e)
+        {
+            _isFocusModeActive = !_isFocusModeActive;
+
+            if (_isFocusModeActive)
+            {
+                FocusModeButton.Background = new SolidColorBrush(Color.FromRgb(0, 122, 255));
+                FocusModeButton.Foreground = Brushes.White;
+                MessageBox.Show("집중 모드가 활성화되었습니다. 방해 앱으로 등록된 프로그램을 실행하면 경고가 표시됩니다.", "집중 모드 ON");
+            }
+            else
+            {
+                FocusModeButton.Background = new SolidColorBrush(Color.FromRgb(0xEF, 0xEF, 0xEF));
+                FocusModeButton.Foreground = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33));
+            }
+        }
 
     }
 }
