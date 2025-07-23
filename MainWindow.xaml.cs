@@ -1,16 +1,17 @@
 ﻿// 파일: MainWindow.xaml.cs (수정)
-// [수정] 누락된 필드 변수 선언, using 구문, 메서드 호출 방식을 모두 수정했습니다.
+// [수정] Owner 속성 설정을 제거하고, Closing 이벤트를 통해 미니 타이머를 직접 닫도록 변경했습니다.
+using System;
+using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.IO;
-using System.Text.Json;
+using System.ComponentModel;
 
 namespace WorkPartner
 {
     public partial class MainWindow : Window
     {
-        // [수정] 페이지 참조를 위한 필드 변수 선언
         private DashboardPage _dashboardPage;
         private SettingsPage _settingsPage;
         private AnalysisPage _analysisPage;
@@ -29,9 +30,17 @@ namespace WorkPartner
 
             PageContent.Content = _dashboardPage;
             UpdateNavButtonSelection(DashboardButton);
+        }
 
-            // 프로그램 시작 시 설정에 따라 미니 타이머를 켭니다.
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
             ToggleMiniTimer();
+        }
+
+        private void MainWindow_Closing(object sender, CancelEventArgs e)
+        {
+            // 메인 창이 닫힐 때 미니 타이머 창도 함께 닫습니다.
+            _miniTimerWindow?.Close();
         }
 
         private void UpdateNavButtonSelection(Button selectedButton)
@@ -84,7 +93,6 @@ namespace WorkPartner
             UpdateNavButtonSelection(sender as Button);
         }
 
-        // [수정] public으로 변경하여 외부에서 접근 가능하도록 함
         public void ToggleMiniTimer()
         {
             var settings = LoadSettings();
@@ -93,8 +101,8 @@ namespace WorkPartner
                 if (_miniTimerWindow == null || !_miniTimerWindow.IsVisible)
                 {
                     _miniTimerWindow = new MiniTimerWindow();
+                    // [수정] 오류의 원인이 되는 Owner 속성 설정 제거
                     _miniTimerWindow.Show();
-                    // 대시보드 페이지가 이미 로드되었다면, 참조를 다시 설정해줍니다.
                     _dashboardPage?.SetMiniTimerReference(_miniTimerWindow);
                 }
             }

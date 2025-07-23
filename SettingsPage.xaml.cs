@@ -1,5 +1,6 @@
 ﻿// 파일: SettingsPage.xaml.cs (수정)
 // [수정] 누락되었던 컨트롤 관련 로직을 복원했습니다.
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -35,9 +36,15 @@ namespace WorkPartner
 
         private void SaveSettings()
         {
+            string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string myAppFolder = Path.Combine(appDataPath, "WorkPartner");
+            Directory.CreateDirectory(myAppFolder);
+            string correctSettingsFilePath = Path.Combine(myAppFolder, "settings.json"); 
+
             var options = new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
             var json = JsonSerializer.Serialize(Settings, options);
-            File.WriteAllText(_settingsFilePath, json);
+
+            File.WriteAllText(correctSettingsFilePath, json);
         }
 
         private void UpdateUIFromSettings()

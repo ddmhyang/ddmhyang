@@ -5,7 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WorkPartner"
         mc:Ignorable="d"
-        Title="작업 파트너" Height="720" Width="1080" MinHeight="600" MinWidth="900">
+        Title="작업 파트너" Height="720" Width="1080" MinHeight="600" MinWidth="900"
+        Loaded="MainWindow_Loaded"
+        Closing="MainWindow_Closing">
     <Window.Resources>
         <Style x:Key="NavButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
