@@ -11,7 +11,8 @@ using System.Drawing;
 using System.Windows.Media.Imaging;
 using System.ComponentModel;
 using System.Windows.Interop;
-using System.Diagnostics; // Process 클래스를 위해 추가
+using System.Diagnostics;
+using System.Windows.Controls.Primitives; // Popup을 위해 추가
 
 namespace WorkPartner
 {
@@ -43,7 +44,7 @@ namespace WorkPartner
         #region 자동 완성 검색 로직
         private void ProcessInputTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (_allPrograms == null) return;
+            if (_allPrograms == null || _allPrograms.Count == 0) return;
             _currentTextBox = sender as TextBox;
             string searchText = _currentTextBox.Text.ToLower();
 
@@ -73,7 +74,7 @@ namespace WorkPartner
         {
             var listBox = sender as ListBox;
             var (popup, _) = GetControlsForListBox(listBox);
-            if (listBox.SelectedItem is InstalledProgram selectedProgram && _currentTextBox != null)
+            if (popup != null && listBox.SelectedItem is InstalledProgram selectedProgram && _currentTextBox != null)
             {
                 _currentTextBox.Text = selectedProgram.ProcessName;
                 popup.IsOpen = false;
@@ -89,7 +90,7 @@ namespace WorkPartner
             }
         }
 
-        private (System.Windows.Controls.Primitives.Popup Popup, ListBox ListBox) GetControlsForTextBox(TextBox textBox)
+        private (Popup Popup, ListBox ListBox) GetControlsForTextBox(TextBox textBox)
         {
             if (textBox == WorkProcessInputTextBox) return (WorkProcessPopup, WorkProcessSuggestionListBox);
             if (textBox == PassiveProcessInputTextBox) return (PassiveProcessPopup, PassiveProcessSuggestionListBox);
@@ -97,7 +98,7 @@ namespace WorkPartner
             return (null, null);
         }
 
-        private (System.Windows.Controls.Primitives.Popup Popup, ListBox ListBox) GetControlsForListBox(ListBox listBox)
+        private (Popup Popup, ListBox ListBox) GetControlsForListBox(ListBox listBox)
         {
             if (listBox == WorkProcessSuggestionListBox) return (WorkProcessPopup, WorkProcessSuggestionListBox);
             if (listBox == PassiveProcessSuggestionListBox) return (PassiveProcessPopup, PassiveProcessSuggestionListBox);
@@ -106,7 +107,7 @@ namespace WorkPartner
         }
         #endregion
 
-        #region 프로그램 목록 및 아이콘 추출 로직 (수정됨)
+        #region 프로그램 목록 및 아이콘 추출 로직 (안정화 버전)
         private List<InstalledProgram> GetAllPrograms()
         {
             var programs = new Dictionary<string, InstalledProgram>();
@@ -126,6 +127,7 @@ namespace WorkPartner
                         {
                             using (RegistryKey subkey = key.OpenSubKey(subkeyName))
                             {
+                                if (subkey == null) continue;
                                 var displayName = subkey.GetValue("DisplayName") as string;
                                 var iconPath = subkey.GetValue("DisplayIcon") as string;
                                 var systemComponent = subkey.GetValue("SystemComponent") as int?;
@@ -200,7 +202,7 @@ namespace WorkPartner
         }
         #endregion
 
-        #region 기존 버튼 이벤트 핸들러 (Add, Delete, etc.)
+        #region 기존 버튼 이벤트 핸들러
         private void AddWorkProcessButton_Click(object sender, RoutedEventArgs e) { var newProcess = WorkProcessInputTextBox.Text.Trim().ToLower(); if (!string.IsNullOrEmpty(newProcess) && !Settings.WorkProcesses.Contains(newProcess)) { Settings.WorkProcesses.Add(newProcess); WorkProcessInputTextBox.Clear(); SaveSettings(); WorkProcessListBox.ItemsSource = null; WorkProcessListBox.ItemsSource = Settings.WorkProcesses; } }
         private void AddPassiveProcessButton_Click(object sender, RoutedEventArgs e) { var newProcess = PassiveProcessInputTextBox.Text.Trim().ToLower(); if (!string.IsNullOrEmpty(newProcess) && !Settings.PassiveProcesses.Contains(newProcess)) { Settings.PassiveProcesses.Add(newProcess); PassiveProcessInputTextBox.Clear(); SaveSettings(); PassiveProcessListBox.ItemsSource = null; PassiveProcessListBox.ItemsSource = Settings.PassiveProcesses; } }
         private void AddDistractionProcessButton_Click(object sender, RoutedEventArgs e) { var newProcess = DistractionProcessInputTextBox.Text.Trim().ToLower(); if (!string.IsNullOrEmpty(newProcess) && !Settings.DistractionProcesses.Contains(newProcess)) { Settings.DistractionProcesses.Add(newProcess); DistractionProcessInputTextBox.Clear(); SaveSettings(); DistractionProcessListBox.ItemsSource = null; DistractionProcessListBox.ItemsSource = Settings.DistractionProcesses; } }
