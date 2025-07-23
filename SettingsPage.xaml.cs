@@ -1,18 +1,18 @@
 ﻿// SettingsPage.xaml.cs (기존 내용을 모두 지우고 아래 코드로 교체)
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
-using Microsoft.Win32;
-using System.Drawing;
-using System.Windows.Media.Imaging;
-using System.ComponentModel;
-using System.Windows.Interop;
-using System.Diagnostics;
 using System.Windows.Controls.Primitives;
+using System.Windows.Interop;
+using System.Windows.Media.Imaging;
+using Microsoft.Win32;
 
 namespace WorkPartner
 {
@@ -138,11 +138,12 @@ namespace WorkPartner
                                         string processName = Path.GetFileNameWithoutExtension(executablePath).ToLower();
                                         if (!programs.ContainsKey(processName))
                                         {
+                                            // UI 스레드에서 아이콘을 생성하도록 경로만 저장
                                             programs[processName] = new InstalledProgram
                                             {
                                                 DisplayName = displayName,
                                                 ProcessName = processName,
-                                                Icon = GetIcon(executablePath)
+                                                IconPath = executablePath
                                             };
                                         }
                                     }
@@ -154,25 +155,14 @@ namespace WorkPartner
                 catch (Exception) { /* 레지스트리 접근 오류 무시 */ }
             }
 
-            var runningProcesses = Process.GetProcesses().Where(p => !string.IsNullOrEmpty(p.MainWindowTitle));
-            foreach (var process in runningProcesses)
+            // 아이콘 생성은 UI 스레드에 위임
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                string processName = process.ProcessName.ToLower();
-                if (!programs.ContainsKey(processName))
+                foreach (var program in programs.Values)
                 {
-                    try
-                    {
-                        string executablePath = process.MainModule.FileName;
-                        programs[processName] = new InstalledProgram
-                        {
-                            DisplayName = process.MainWindowTitle,
-                            ProcessName = processName,
-                            Icon = GetIcon(executablePath)
-                        };
-                    }
-                    catch (Exception) { /* 접근 권한 없는 시스템 프로세스는 무시 */ }
+                    program.Icon = GetIcon(program.IconPath);
                 }
-            }
+            });
 
             return programs.Values.OrderBy(p => p.DisplayName).ToList();
         }
@@ -187,13 +177,22 @@ namespace WorkPartner
 
         private BitmapSource GetIcon(string filePath)
         {
-            try { using (Icon icon = Icon.ExtractAssociatedIcon(filePath)) { return Imaging.CreateBitmapSourceFromHIcon(icon.Handle, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions()); } }
+            if (string.IsNullOrEmpty(filePath)) return null;
+            try
+            {
+                using (Icon icon = Icon.ExtractAssociatedIcon(filePath))
+                {
+                    return Imaging.CreateBitmapSourceFromHIcon(
+                        icon.Handle,
+                        Int32Rect.Empty,
+                        BitmapSizeOptions.FromEmptyOptions());
+                }
+            }
             catch { return null; }
         }
         #endregion
 
         #region 버튼 이벤트 핸들러
-        // '실행 중인 앱 목록 보기' 버튼 공통 핸들러
         private void SelectRunningAppButton_Click(object sender, RoutedEventArgs e)
         {
             var runningApps = Process.GetProcesses().Where(p => !string.IsNullOrEmpty(p.MainWindowTitle)).Select(p => p.ProcessName.ToLower()).Distinct().OrderBy(name => name).ToList();
@@ -212,17 +211,14 @@ namespace WorkPartner
             }
         }
 
-        // 추가 버튼 핸들러
         private void AddWorkProcessButton_Click(object sender, RoutedEventArgs e) { var newProcess = WorkProcessInputTextBox.Text.Trim().ToLower(); if (!string.IsNullOrEmpty(newProcess) && !Settings.WorkProcesses.Contains(newProcess)) { Settings.WorkProcesses.Add(newProcess); WorkProcessInputTextBox.Clear(); SaveSettings(); WorkProcessListBox.ItemsSource = null; WorkProcessListBox.ItemsSource = Settings.WorkProcesses; } }
         private void AddPassiveProcessButton_Click(object sender, RoutedEventArgs e) { var newProcess = PassiveProcessInputTextBox.Text.Trim().ToLower(); if (!string.IsNullOrEmpty(newProcess) && !Settings.PassiveProcesses.Contains(newProcess)) { Settings.PassiveProcesses.Add(newProcess); PassiveProcessInputTextBox.Clear(); SaveSettings(); PassiveProcessListBox.ItemsSource = null; PassiveProcessListBox.ItemsSource = Settings.PassiveProcesses; } }
         private void AddDistractionProcessButton_Click(object sender, RoutedEventArgs e) { var newProcess = DistractionProcessInputTextBox.Text.Trim().ToLower(); if (!string.IsNullOrEmpty(newProcess) && !Settings.DistractionProcesses.Contains(newProcess)) { Settings.DistractionProcesses.Add(newProcess); DistractionProcessInputTextBox.Clear(); SaveSettings(); DistractionProcessListBox.ItemsSource = null; DistractionProcessListBox.ItemsSource = Settings.DistractionProcesses; } }
 
-        // 삭제 버튼 핸들러 (새로 추가)
         private void DeleteWorkProcessButton_Click(object sender, RoutedEventArgs e) { if (WorkProcessListBox.SelectedItem is string selected) { Settings.WorkProcesses.Remove(selected); SaveSettings(); WorkProcessListBox.ItemsSource = null; WorkProcessListBox.ItemsSource = Settings.WorkProcesses; } }
         private void DeletePassiveProcessButton_Click(object sender, RoutedEventArgs e) { if (PassiveProcessListBox.SelectedItem is string selected) { Settings.PassiveProcesses.Remove(selected); SaveSettings(); PassiveProcessListBox.ItemsSource = null; PassiveProcessListBox.ItemsSource = Settings.PassiveProcesses; } }
         private void DeleteDistractionProcessButton_Click(object sender, RoutedEventArgs e) { if (DistractionProcessListBox.SelectedItem is string selected) { Settings.DistractionProcesses.Remove(selected); SaveSettings(); DistractionProcessListBox.ItemsSource = null; DistractionProcessListBox.ItemsSource = Settings.DistractionProcesses; } }
 
-        // 기타 설정 핸들러
         private void Setting_Changed(object sender, RoutedEventArgs e) { if (Settings == null) return; if (sender == IdleDetectionCheckBox) { Settings.IsIdleDetectionEnabled = IdleDetectionCheckBox.IsChecked ?? true; } else if (sender == MiniTimerCheckBox) { Settings.IsMiniTimerEnabled = MiniTimerCheckBox.IsChecked ?? false; (Application.Current.MainWindow as MainWindow)?.ToggleMiniTimer(); } SaveSettings(); }
         private void Setting_Changed_IdleTimeout(object sender, TextChangedEventArgs e) { if (Settings != null && int.TryParse(IdleTimeoutTextBox.Text, out int timeout)) { Settings.IdleTimeoutSeconds = timeout; SaveSettings(); } }
         private void NagMessageTextBox_TextChanged(object sender, TextChangedEventArgs e) { if (Settings != null) { Settings.FocusModeNagMessage = NagMessageTextBox.Text; SaveSettings(); } }
