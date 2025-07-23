@@ -27,7 +27,7 @@ namespace WorkPartner
         [DllImport("kernel32.dll")]
         private static extern uint GetTickCount();
 
-        // [추가] 윈도우 열거를 위한 P/Invoke
+        // 윈도우 열거를 위한 P/Invoke
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -98,7 +98,6 @@ namespace WorkPartner
             return null;
         }
 
-        // [수정] GetBrowserTabInfos 메서드
         public static List<(string Title, string UrlKeyword)> GetBrowserTabInfos(string browserProcessName)
         {
             var tabs = new List<(string Title, string UrlKeyword)>();
@@ -107,7 +106,6 @@ namespace WorkPartner
 
             foreach (var process in processes)
             {
-                // [수정] MainWindowHandle 대신 모든 창을 가져옵니다.
                 List<IntPtr> windowHandles = GetWindowHandlesForProcess(process.Id);
 
                 foreach (var handle in windowHandles)
@@ -117,26 +115,32 @@ namespace WorkPartner
                         var rootElement = AutomationElement.FromHandle(handle);
                         if (rootElement == null) continue;
 
-                        var tabItems = rootElement.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem));
+                        var tabContainerCondition = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Tab);
+                        var tabContainer = rootElement.FindFirst(TreeScope.Descendants, tabContainerCondition);
 
-                        foreach (AutomationElement tabItem in tabItems)
+                        if (tabContainer != null)
                         {
-                            string tabTitle = tabItem.Current.Name;
-                            if (browserProcessName == "chrome") tabTitle = tabTitle.Replace(" - Google Chrome", "");
-                            else if (browserProcessName == "msedge") tabTitle = tabTitle.Replace(" - Microsoft Edge", "");
-                            else if (browserProcessName == "whale") tabTitle = tabTitle.Replace(" - Naver Whale", "");
+                            // [수정] 탭 컨테이너의 '직계 자식'이 아닌 '모든 후손' 중에서 탭 아이템을 찾도록 변경
+                            var tabItems = tabContainer.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem));
 
-                            if (!string.IsNullOrWhiteSpace(tabTitle) && !tabTitle.Equals("새 탭") && !tabTitle.StartsWith("tab-") && addedTitles.Add(tabTitle))
+                            foreach (AutomationElement tabItem in tabItems)
                             {
-                                try
+                                string tabTitle = tabItem.Current.Name;
+                                if (browserProcessName == "chrome") tabTitle = tabTitle.Replace(" - Google Chrome", "");
+                                else if (browserProcessName == "msedge") tabTitle = tabTitle.Replace(" - Microsoft Edge", "");
+                                else if (browserProcessName == "whale") tabTitle = tabTitle.Replace(" - Naver Whale", "");
+
+                                if (!string.IsNullOrWhiteSpace(tabTitle) && !tabTitle.Equals("새 탭") && !tabTitle.StartsWith("tab-") && addedTitles.Add(tabTitle))
                                 {
-                                    string urlKeyword = new Uri("http://" + tabTitle.Split(' ')[0]).Host.ToLower();
-                                    tabs.Add((tabTitle, urlKeyword));
-                                }
-                                catch (UriFormatException)
-                                {
-                                    // URL 형식이 아닌 경우(예: 설정 페이지) 대비
-                                    tabs.Add((tabTitle, tabTitle.ToLower()));
+                                    try
+                                    {
+                                        string urlKeyword = new Uri("http://" + tabTitle.Split(' ')[0]).Host.ToLower();
+                                        tabs.Add((tabTitle, urlKeyword));
+                                    }
+                                    catch (UriFormatException)
+                                    {
+                                        tabs.Add((tabTitle, tabTitle.ToLower()));
+                                    }
                                 }
                             }
                         }
@@ -147,7 +151,6 @@ namespace WorkPartner
             return tabs;
         }
 
-        // [추가] 특정 프로세스에 속한 모든 창 핸들을 가져오는 도우미 메서드
         private static List<IntPtr> GetWindowHandlesForProcess(int processId)
         {
             var windowHandles = new List<IntPtr>();
