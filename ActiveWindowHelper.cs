@@ -1,15 +1,11 @@
-﻿// 파일: WorkPartner/ActiveWindowHelper.cs
-
+﻿// ActiveWindowHelper.cs (수정안)
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO; // <<-- 이 줄을 추가하세요!
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Automation;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace WorkPartner
 {
@@ -30,6 +26,14 @@ namespace WorkPartner
         private static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
         [DllImport("kernel32.dll")]
         private static extern uint GetTickCount();
+
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool IsWindowVisible(IntPtr hWnd);
         #endregion
 
         public static string GetActiveProcessName()
@@ -93,65 +97,113 @@ namespace WorkPartner
             return null;
         }
 
-        public static List<(string Title, string UrlKeyword)> GetBrowserTabInfos(string browserProcessName)
+        //public static List<(string Title, string UrlKeyword)> GetBrowserTabInfos(string browserProcessName)
+        //{
+        //    var tabs = new List<(string Title, string UrlKeyword)>();
+        //    var processes = Process.GetProcessesByName(browserProcessName);
+
+        //    foreach (var process in processes)
+        //    {
+        //        List<IntPtr> windowHandles = GetWindowHandlesForProcess(process.Id);
+
+        //        foreach (var handle in windowHandles)
+        //        {
+        //            try
+        //            {
+        //                var rootElement = AutomationElement.FromHandle(handle);
+        //                if (rootElement == null) continue;
+
+        //                var tabContainerCondition = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Tab);
+        //                var tabContainer = rootElement.FindFirst(TreeScope.Descendants, tabContainerCondition);
+
+        //                if (tabContainer != null)
+        //                {
+        //                    var tabItems = tabContainer.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem));
+
+        //                    foreach (AutomationElement tabItem in tabItems)
+        //                    {
+        //                        string url = GetBrowserTabUrlForTabItem(tabItem);
+
+        //                        if (!string.IsNullOrWhiteSpace(url))
+        //                        {
+        //                            try
+        //                            {
+        //                                string tabTitle = tabItem.Current.Name;
+        //                                string urlKeyword = new Uri(url).Host.ToLower();
+        //                                tabs.Add((tabTitle, urlKeyword));
+        //                            }
+        //                            catch (UriFormatException)
+        //                            {
+        //                                // URL 형식이 유효하지 않은 경우
+        //                            }
+        //                        }
+        //                    }
+        //                }
+        //            }
+        //            catch { }
+        //        }
+        //    }
+        //    return tabs;
+        //}
+
+        public static string GetBrowserTabUrlForTabItem(AutomationElement tabItem)
         {
-            var allTabs = new List<(string Title, string UrlKeyword)>();
-            var addedTitles = new HashSet<string>();
-
-            // 네이티브 호스트 실행 파일의 경로를 지정합니다.
-            // ⚠️ 중요: 아래 경로는 실제 프로젝트 환경에 맞게 수정해야 합니다!
-            string hostPath = @"C:\Users\kimgh\source\repos\WorkPartner\WorkPartner.NativeHost\bin\Debug\WorkPartner.NativeHost.exe";
-
-            if (!File.Exists(hostPath))
-            {
-                // 파일이 없을 경우, 빈 목록을 반환합니다.
-                return allTabs;
-            }
-
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = hostPath,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true // 콘솔 창을 띄우지 않습니다.
-                }
-            };
-
-            process.Start();
-
-            string output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
-
-            if (string.IsNullOrWhiteSpace(output))
-            {
-                return allTabs;
-            }
-
             try
             {
-                var jsonResult = JObject.Parse(output);
-                var tabs = jsonResult["tabs"];
-
-                foreach (var tab in tabs)
+                AutomationElement rootElement = tabItem;
+                while (rootElement.Current.ControlType != ControlType.Window)
                 {
-                    string title = tab["Title"]?.ToString() ?? "제목 없음";
-                    string url = tab["Url"]?.ToString() ?? string.Empty;
+                    rootElement = TreeWalker.ControlViewWalker.GetParent(rootElement);
+                    if (rootElement == null) return null;
+                }
 
-                    if (!string.IsNullOrEmpty(title) && !addedTitles.Contains(title))
-                    {
-                        allTabs.Add((title, url));
-                        addedTitles.Add(title);
-                    }
+                var addressBar = rootElement.FindFirst(TreeScope.Descendants,
+                    new AndCondition(
+                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
+                        new PropertyCondition(AutomationElement.NameProperty, "주소창 및 검색창")
+                    ));
+
+                if (addressBar == null)
+                {
+                    addressBar = rootElement.FindFirst(TreeScope.Descendants,
+                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
+                }
+
+                if (addressBar != null && addressBar.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
+                {
+                    return ((ValuePattern)pattern).Current.Value as string;
                 }
             }
-            catch (Exception)
-            {
-                // JSON 파싱 중 오류가 발생해도 무시하고 계속 진행합니다.
-            }
+            catch { }
 
-            return allTabs;
+            return null;
+        }
+
+        private static List<IntPtr> GetWindowHandlesForProcess(int processId)
+        {
+            var windowHandles = new List<IntPtr>();
+            GCHandle gcHandles = GCHandle.Alloc(windowHandles);
+            try
+            {
+                EnumWindows(new EnumWindowsProc((hWnd, lParam) =>
+                {
+                    GetWindowThreadProcessId(hWnd, out uint windowProcessId);
+                    if (windowProcessId == processId && IsWindowVisible(hWnd) && GetWindowTextLength(hWnd) > 0)
+                    {
+                        var list = GCHandle.FromIntPtr(lParam).Target as List<IntPtr>;
+                        list.Add(hWnd);
+                    }
+                    return true;
+                }), GCHandle.ToIntPtr(gcHandles));
+            }
+            finally
+            {
+                if (gcHandles.IsAllocated)
+                {
+                    gcHandles.Free();
+                }
+            }
+            return windowHandles;
         }
 
         public static TimeSpan GetIdleTime()

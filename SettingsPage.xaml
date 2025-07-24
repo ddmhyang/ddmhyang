@@ -58,23 +58,12 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                            <TextBlock Text="작업 프로그램" FontWeight="Bold"/>
-                            <TextBox x:Name="WorkProcessInputTextBox" TextChanged="ProcessInputTextBox_TextChanged" LostFocus="ProcessInputTextBox_LostFocus" ToolTip="프로그램 이름을 입력하여 검색하세요."/>
-                            <Popup x:Name="WorkProcessPopup" IsOpen="False" StaysOpen="False" PlacementTarget="{Binding ElementName=WorkProcessInputTextBox}" MaxHeight="200">
-                                <Border BorderBrush="Gray" BorderThickness="1" Background="White">
-                                    <ListBox x:Name="WorkProcessSuggestionListBox" SelectionChanged="SuggestionListBox_SelectionChanged">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,5,0"/>
-                                                    <TextBlock Text="{Binding DisplayName}"/>
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
-                                </Border>
-                            </Popup>
-                            <Button Content="실행 중인 앱 목록 보기" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Work"/>
+                            <TextBlock Text="작업 프로그램/사이트" FontWeight="Bold"/>
+                            <TextBox x:Name="WorkProcessInputTextBox" ToolTip="프로그램/사이트 키워드를 입력하세요."/>
+                            <Button Content="실행 중인 앱에서 선택" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Work"/>
+
+                            <Button Content="현재 활성 탭 추가" Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Work"/>
+
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -87,23 +76,12 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Margin="5,0">
-                            <TextBlock Text="수동 프로그램" FontWeight="Bold"/>
-                            <TextBox x:Name="PassiveProcessInputTextBox" TextChanged="ProcessInputTextBox_TextChanged" LostFocus="ProcessInputTextBox_LostFocus" ToolTip="프로그램 이름을 입력하여 검색하세요."/>
-                            <Popup x:Name="PassiveProcessPopup" IsOpen="False" StaysOpen="False" PlacementTarget="{Binding ElementName=PassiveProcessInputTextBox}" MaxHeight="200">
-                                <Border BorderBrush="Gray" BorderThickness="1" Background="White">
-                                    <ListBox x:Name="PassiveProcessSuggestionListBox" SelectionChanged="SuggestionListBox_SelectionChanged">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,5,0"/>
-                                                    <TextBlock Text="{Binding DisplayName}"/>
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
-                                </Border>
-                            </Popup>
-                            <Button Content="실행 중인 앱 목록 보기" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Passive"/>
+                            <TextBlock Text="수동 프로그램/사이트" FontWeight="Bold"/>
+                            <TextBox x:Name="PassiveProcessInputTextBox" ToolTip="프로그램/사이트 키워드를 입력하세요."/>
+                            <Button Content="실행 중인 앱에서 선택" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Passive"/>
+
+                            <Button Content="현재 활성 탭 추가" Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Passive"/>
+
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -116,23 +94,12 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="2" Margin="10,0,0,0">
-                            <TextBlock Text="방해 프로그램" FontWeight="Bold"/>
-                            <TextBox x:Name="DistractionProcessInputTextBox" TextChanged="ProcessInputTextBox_TextChanged" LostFocus="ProcessInputTextBox_LostFocus" ToolTip="프로그램 이름을 입력하여 검색하세요."/>
-                            <Popup x:Name="DistractionProcessPopup" IsOpen="False" StaysOpen="False" PlacementTarget="{Binding ElementName=DistractionProcessInputTextBox}" MaxHeight="200">
-                                <Border BorderBrush="Gray" BorderThickness="1" Background="White">
-                                    <ListBox x:Name="DistractionProcessSuggestionListBox" SelectionChanged="SuggestionListBox_SelectionChanged">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,5,0"/>
-                                                    <TextBlock Text="{Binding DisplayName}"/>
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
-                                </Border>
-                            </Popup>
-                            <Button Content="실행 중인 앱 목록 보기" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Distraction"/>
+                            <TextBlock Text="방해 프로그램/사이트" FontWeight="Bold"/>
+                            <TextBox x:Name="DistractionProcessInputTextBox" ToolTip="프로그램/사이트 키워드를 입력하세요."/>
+                            <Button Content="실행 중인 앱에서 선택" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Distraction"/>
+
+                            <Button Content="현재 활성 탭 추가" Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Distraction"/>
+
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>

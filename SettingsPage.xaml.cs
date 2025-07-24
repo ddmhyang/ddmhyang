@@ -218,94 +218,48 @@ namespace WorkPartner
         private void SelectRunningAppButton_Click(object sender, RoutedEventArgs e)
         {
             var allRunningApps = new List<InstalledProgram>();
-            var websites = new List<InstalledProgram>();
             var addedProcesses = new HashSet<string>();
 
-            // 1. 실행 중인 일반 프로그램 목록 가져오기
+            // 1. 실행 중인 일반 프로그램 목록만 가져옵니다.
             var runningProcesses = Process.GetProcesses().Where(p => !string.IsNullOrEmpty(p.MainWindowTitle));
             foreach (var process in runningProcesses)
             {
                 try
                 {
                     string processName = process.ProcessName.ToLower();
+                    if (addedProcesses.Contains(processName)) continue;
 
-                    // 브라우저 프로세스는 이 단계에서 제외합니다 (다음 단계에서 탭별로 처리).
-                    if (new[] { "chrome", "msedge", "whale" }.Contains(processName))
+                    allRunningApps.Add(new InstalledProgram
                     {
-                        continue;
-                    }
-
-                    if (!addedProcesses.Contains(processName))
-                    {
-                        allRunningApps.Add(new InstalledProgram
-                        {
-                            DisplayName = process.MainWindowTitle,
-                            ProcessName = processName,
-                            Icon = GetIcon(process.MainModule.FileName)
-                        });
-                        addedProcesses.Add(processName);
-                    }
+                        DisplayName = process.MainWindowTitle,
+                        ProcessName = processName,
+                        Icon = GetIcon(process.MainModule.FileName)
+                    });
+                    addedProcesses.Add(processName);
                 }
-                catch
-                {
-                    // 일부 시스템 프로세스는 접근 시 오류가 발생할 수 있으므로 무시합니다.
-                }
+                catch { /* 접근 권한 없는 프로세스는 무시 */ }
             }
 
-            // 2. 실행 중인 브라우저 탭 목록 가져오기 (수정된 로직)
-            // ActiveWindowHelper를 통해 모든 브라우저의 모든 탭을 한 번에 가져옵니다.
-            var allBrowserTabs = ActiveWindowHelper.GetBrowserTabInfos(null);
-
-            foreach (var tab in allBrowserTabs)
-            {
-                // 탭 제목이 없거나, 이미 추가된 웹사이트는 건너뜁니다.
-                if (string.IsNullOrWhiteSpace(tab.Title) || websites.Any(w => w.DisplayName == tab.Title))
-                {
-                    continue;
-                }
-
-                // 아이콘은 대표 브라우저(예: 크롬)의 아이콘을 가져와 사용합니다.
-                var browserProcess = Process.GetProcessesByName("chrome").FirstOrDefault();
-                if (browserProcess == null) browserProcess = Process.GetProcessesByName("msedge").FirstOrDefault();
-                if (browserProcess == null) browserProcess = Process.GetProcessesByName("whale").FirstOrDefault();
-
-                websites.Add(new InstalledProgram
-                {
-                    DisplayName = tab.Title,
-                    ProcessName = tab.UrlKeyword, // ProcessName 필드에 URL의 핵심 키워드를 저장합니다.
-                    Icon = (browserProcess != null) ? GetIcon(browserProcess.MainModule.FileName) : null
-                });
-            }
-
-            // 3. 목록 정렬 및 선택 창 표시
+            // 2. 목록 정렬 및 선택 창 표시 (웹사이트 관련 로직 완전 삭제)
             var sortedApps = allRunningApps.OrderBy(p => p.DisplayName).ToList();
-            var sortedWebsites = websites.OrderBy(p => p.DisplayName).ToList();
 
-            if (!sortedApps.Any() && !sortedWebsites.Any())
+            if (!sortedApps.Any())
             {
-                MessageBox.Show("목록에 표시할 실행 중인 프로그램이나 웹사이트가 없습니다.");
+                MessageBox.Show("목록에 표시할 실행 중인 프로그램이 없습니다.");
                 return;
             }
 
-            var selectionWindow = new AppSelectionWindow(sortedApps, sortedWebsites) { Owner = Window.GetWindow(this) };
+            // AppSelectionWindow에 프로그램 목록만 넘겨줍니다.
+            var selectionWindow = new AppSelectionWindow(sortedApps) { Owner = Window.GetWindow(this) };
             if (selectionWindow.ShowDialog() == true)
             {
                 string selectedKeyword = selectionWindow.SelectedAppKeyword;
                 if (string.IsNullOrEmpty(selectedKeyword)) return;
 
                 string targetList = (sender as Button)?.Tag as string;
-                if (targetList == "Work")
-                {
-                    WorkProcessInputTextBox.Text = selectedKeyword;
-                }
-                else if (targetList == "Passive")
-                {
-                    PassiveProcessInputTextBox.Text = selectedKeyword;
-                }
-                else if (targetList == "Distraction")
-                {
-                    DistractionProcessInputTextBox.Text = selectedKeyword;
-                }
+                if (targetList == "Work") WorkProcessInputTextBox.Text = selectedKeyword;
+                else if (targetList == "Passive") PassiveProcessInputTextBox.Text = selectedKeyword;
+                else if (targetList == "Distraction") DistractionProcessInputTextBox.Text = selectedKeyword;
             }
         }
 
@@ -501,5 +455,52 @@ namespace WorkPartner
             }
         }
         #endregion
+        // 파일: SettingsPage.xaml.cs
+
+        private void AddActiveTabButton_Click(object sender, RoutedEventArgs e)
+        {
+            string activeUrl = ActiveWindowHelper.GetActiveBrowserTabUrl();
+
+            if (string.IsNullOrEmpty(activeUrl))
+            {
+                MessageBox.Show("활성화된 브라우저 탭을 찾을 수 없습니다. 브라우저를 먼저 클릭해주세요.", "알림");
+                return;
+            }
+
+            string urlKeyword = "N/A";
+            try
+            {
+                if (Uri.IsWellFormedUriString(activeUrl, UriKind.Absolute))
+                {
+                    urlKeyword = new Uri(activeUrl).Host.ToLower();
+                }
+                else
+                {
+                    MessageBox.Show("유효한 웹사이트 주소가 아닙니다.", "알림");
+                    return;
+                }
+            }
+            catch
+            {
+                MessageBox.Show("웹사이트 주소를 분석하는 데 실패했습니다.", "오류");
+                return;
+            }
+
+            // 어느 목록에 추가할지 버튼의 Tag로 결정합니다.
+            string targetList = (sender as Button)?.Tag as string;
+
+            if (targetList == "Work")
+            {
+                WorkProcessInputTextBox.Text = urlKeyword;
+            }
+            else if (targetList == "Passive")
+            {
+                PassiveProcessInputTextBox.Text = urlKeyword;
+            }
+            else if (targetList == "Distraction")
+            {
+                DistractionProcessInputTextBox.Text = urlKeyword;
+            }
+        }
     }
 }
