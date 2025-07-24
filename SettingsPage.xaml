@@ -59,10 +59,24 @@
 
                         <StackPanel Grid.Column="0" Margin="0,0,10,0">
                             <TextBlock Text="작업 프로그램/사이트" FontWeight="Bold"/>
-                            <TextBox x:Name="WorkProcessInputTextBox" ToolTip="프로그램/사이트 키워드를 입력하세요."/>
+                            <Grid>
+                                <TextBox x:Name="WorkProcessInputTextBox" ToolTip="프로그램/사이트 키워드를 입력하세요." TextChanged="AutoComplete_TextChanged" PreviewKeyDown="AutoComplete_PreviewKeyDown" Tag="Work"/>
+                                <Popup x:Name="WorkAutoCompletePopup" IsOpen="False" StaysOpen="False" PlacementTarget="{Binding ElementName=WorkProcessInputTextBox}" Placement="Bottom">
+                                    <ListBox x:Name="WorkSuggestionListBox" MaxHeight="200" MinWidth="{Binding ElementName=WorkProcessInputTextBox, Path=ActualWidth}" SelectionChanged="SuggestionListBox_SelectionChanged" PreviewKeyDown="AutoComplete_PreviewKeyDown" Tag="Work">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,5,0" />
+                                                    <TextBlock Text="{Binding DisplayName}" />
+                                                    <TextBlock Text="{Binding ProcessName}" Foreground="Gray" Margin="5,0,0,0" FontStyle="Italic"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Popup>
+                            </Grid>
                             <Button Content="실행 중인 앱에서 선택" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Work"/>
-                            <Button Content="3초 후 활성 탭 추가" ToolTip="버튼을 누른 후 3초 안에 원하는 브라우저 탭을 클릭하세요." Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Work"/>
-
+                            <Button Content="3초 후 활성 탭 추가" Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Work"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -71,16 +85,29 @@
                                 <Button Grid.Column="0" Content="추가" Click="AddWorkProcessButton_Click" Margin="0,5,5,0"/>
                                 <Button Grid.Column="1" Content="삭제" Click="DeleteWorkProcessButton_Click" Margin="0,5,0,0" Background="#d9534f"/>
                             </Grid>
-                            <ListBox x:Name="WorkProcessListBox" Height="100"/>
+                            <ListBox x:Name="WorkProcessListBox" Height="100" ItemsSource="{Binding Settings.WorkProcesses}"/>
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Margin="5,0">
                             <TextBlock Text="수동 프로그램/사이트" FontWeight="Bold"/>
-                            <TextBox x:Name="PassiveProcessInputTextBox" ToolTip="프로그램/사이트 키워드를 입력하세요."/>
+                            <Grid>
+                                <TextBox x:Name="PassiveProcessInputTextBox" ToolTip="프로그램/사이트 키워드를 입력하세요." TextChanged="AutoComplete_TextChanged" PreviewKeyDown="AutoComplete_PreviewKeyDown" Tag="Passive"/>
+                                <Popup x:Name="PassiveAutoCompletePopup" IsOpen="False" StaysOpen="False" PlacementTarget="{Binding ElementName=PassiveProcessInputTextBox}" Placement="Bottom">
+                                    <ListBox x:Name="PassiveSuggestionListBox" MaxHeight="200" MinWidth="{Binding ElementName=PassiveProcessInputTextBox, Path=ActualWidth}" SelectionChanged="SuggestionListBox_SelectionChanged" PreviewKeyDown="AutoComplete_PreviewKeyDown" Tag="Passive">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,5,0" />
+                                                    <TextBlock Text="{Binding DisplayName}" />
+                                                    <TextBlock Text="{Binding ProcessName}" Foreground="Gray" Margin="5,0,0,0" FontStyle="Italic"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Popup>
+                            </Grid>
                             <Button Content="실행 중인 앱에서 선택" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Passive"/>
-
-                            <Button Content="3초 후 활성 탭 추가" ToolTip="버튼을 누른 후 3초 안에 원하는 브라우저 탭을 클릭하세요." Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Passive"/>
-
+                            <Button Content="3초 후 활성 탭 추가" Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Passive"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -89,16 +116,29 @@
                                 <Button Grid.Column="0" Content="추가" Click="AddPassiveProcessButton_Click" Margin="0,5,5,0"/>
                                 <Button Grid.Column="1" Content="삭제" Click="DeletePassiveProcessButton_Click" Margin="0,5,0,0" Background="#d9534f"/>
                             </Grid>
-                            <ListBox x:Name="PassiveProcessListBox" Height="100"/>
+                            <ListBox x:Name="PassiveProcessListBox" Height="100" ItemsSource="{Binding Settings.PassiveProcesses}"/>
                         </StackPanel>
 
                         <StackPanel Grid.Column="2" Margin="10,0,0,0">
                             <TextBlock Text="방해 프로그램/사이트" FontWeight="Bold"/>
-                            <TextBox x:Name="DistractionProcessInputTextBox" ToolTip="프로그램/사이트 키워드를 입력하세요."/>
+                            <Grid>
+                                <TextBox x:Name="DistractionProcessInputTextBox" ToolTip="프로그램/사이트 키워드를 입력하세요." TextChanged="AutoComplete_TextChanged" PreviewKeyDown="AutoComplete_PreviewKeyDown" Tag="Distraction"/>
+                                <Popup x:Name="DistractionAutoCompletePopup" IsOpen="False" StaysOpen="False" PlacementTarget="{Binding ElementName=DistractionProcessInputTextBox}" Placement="Bottom">
+                                    <ListBox x:Name="DistractionSuggestionListBox" MaxHeight="200" MinWidth="{Binding ElementName=DistractionProcessInputTextBox, Path=ActualWidth}" SelectionChanged="SuggestionListBox_SelectionChanged" PreviewKeyDown="AutoComplete_PreviewKeyDown" Tag="Distraction">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,5,0" />
+                                                    <TextBlock Text="{Binding DisplayName}" />
+                                                    <TextBlock Text="{Binding ProcessName}" Foreground="Gray" Margin="5,0,0,0" FontStyle="Italic"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Popup>
+                            </Grid>
                             <Button Content="실행 중인 앱에서 선택" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Distraction"/>
-
-                            <Button Content="3초 후 활성 탭 추가" ToolTip="버튼을 누른 후 3초 안에 원하는 브라우저 탭을 클릭하세요." Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Distraction"/>
-
+                            <Button Content="3초 후 활성 탭 추가" Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Distraction"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -107,7 +147,7 @@
                                 <Button Grid.Column="0" Content="추가" Click="AddDistractionProcessButton_Click" Margin="0,5,5,0"/>
                                 <Button Grid.Column="1" Content="삭제" Click="DeleteDistractionProcessButton_Click" Margin="0,5,0,0" Background="#d9534f"/>
                             </Grid>
-                            <ListBox x:Name="DistractionProcessListBox" Height="100"/>
+                            <ListBox x:Name="DistractionProcessListBox" Height="100" ItemsSource="{Binding Settings.DistractionProcesses}"/>
                         </StackPanel>
                     </Grid>
                 </Border>

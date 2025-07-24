@@ -10,10 +10,12 @@ using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading; // 타이머를 위해 추가
 using Microsoft.Win32;
+using System.Windows.Controls.Primitives; //  <-- 이 줄을 추가하세요!
 
 namespace WorkPartner
 {
@@ -440,6 +442,138 @@ namespace WorkPartner
                 }
             }
         }
+        #endregion
+
+        #region 자동완성 로직
+
+        // 텍스트가 변경될 때 호출되는 공통 이벤트 핸들러
+        private void AutoComplete_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            var textBox = sender as TextBox;
+            if (textBox == null) return;
+
+            string tag = textBox.Tag.ToString();
+            string searchText = textBox.Text.ToLower();
+
+            Popup popup;
+            ListBox suggestionBox;
+
+            if (tag == "Work")
+            {
+                popup = WorkAutoCompletePopup;
+                suggestionBox = WorkSuggestionListBox;
+            }
+            else if (tag == "Passive")
+            {
+                // TODO: Passive 용 Popup, ListBox를 할당하세요. (e.g., popup = PassiveAutoCompletePopup;)
+                return; // 지금은 Work만 구현
+            }
+            else // Distraction
+            {
+                // TODO: Distraction 용 Popup, ListBox를 할당하세요.
+                return; // 지금은 Work만 구현
+            }
+
+            if (string.IsNullOrWhiteSpace(searchText))
+            {
+                popup.IsOpen = false;
+                return;
+            }
+
+            // _allPrograms 리스트에서 프로그램을 검색합니다.
+            if (_allPrograms != null)
+            {
+                var suggestions = _allPrograms
+                    .Where(p => p.DisplayName.ToLower().Contains(searchText) || p.ProcessName.ToLower().Contains(searchText))
+                    .OrderBy(p => p.DisplayName)
+                    .ToList();
+
+                if (suggestions.Any())
+                {
+                    suggestionBox.ItemsSource = suggestions;
+                    popup.IsOpen = true;
+                }
+                else
+                {
+                    popup.IsOpen = false;
+                }
+            }
+        }
+        // 추천 목록에서 항목을 선택했을 때
+        private void SuggestionListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var listBox = sender as ListBox;
+            var textBox = FindAssociatedTextBox(listBox.Tag.ToString());
+            var popup = FindAssociatedPopup(listBox.Tag.ToString());
+
+            if (listBox.SelectedItem is InstalledProgram selectedProgram)
+            {
+                // 변경 이벤트가 다시 발생하지 않도록 잠시 이벤트를 해제합니다.
+                textBox.TextChanged -= AutoComplete_TextChanged;
+                textBox.Text = selectedProgram.ProcessName;
+                textBox.TextChanged += AutoComplete_TextChanged;
+
+                popup.IsOpen = false;
+            }
+        }
+
+        // 키보드 입력(Enter, 화살표 키 등)을 처리하기 위한 핸들러
+        private void AutoComplete_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            var fe = sender as FrameworkElement;
+            if (fe == null) return;
+
+            string tag = fe.Tag.ToString();
+            var popup = FindAssociatedPopup(tag);
+            var suggestionBox = FindAssociatedSuggestionBox(tag);
+
+            if (popup.IsOpen)
+            {
+                if (e.Key == Key.Down)
+                {
+                    suggestionBox.Focus();
+                    if (suggestionBox.Items.Count > 0)
+                    {
+                        suggestionBox.SelectedIndex = 0;
+                    }
+                }
+                else if (e.Key == Key.Escape)
+                {
+                    popup.IsOpen = false;
+                }
+                else if (e.Key == Key.Enter && suggestionBox.IsFocused)
+                {
+                    SuggestionListBox_SelectionChanged(suggestionBox, null);
+                }
+            }
+        }
+
+        // 아래는 Tag를 이용해 관련된 컨트롤을 찾아주는 도우미 메서드들입니다.
+        private TextBox FindAssociatedTextBox(string tag)
+        {
+            if (tag == "Work") return WorkProcessInputTextBox;
+            if (tag == "Passive") return PassiveProcessInputTextBox;
+            if (tag == "Distraction") return DistractionProcessInputTextBox;
+            return null;
+        }
+
+        private Popup FindAssociatedPopup(string tag)
+        {
+            if (tag == "Work") return WorkAutoCompletePopup;
+            if (tag == "Passive") return PassiveAutoCompletePopup; // XAML에 추가 후 연결
+            if (tag == "Distraction") return DistractionAutoCompletePopup; // XAML에 추가 후 연결
+            return null;
+        }
+
+        private ListBox FindAssociatedSuggestionBox(string tag)
+        {
+            if (tag == "Work") return WorkSuggestionListBox;
+            if (tag == "Passive") return PassiveSuggestionListBox; // XAML에 추가 후 연결
+            if (tag == "Distraction") return DistractionSuggestionListBox; // XAML에 추가 후 연결
+            return null;
+        }
+
+
         #endregion
     }
 }
