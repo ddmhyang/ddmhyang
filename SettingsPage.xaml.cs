@@ -140,7 +140,8 @@ namespace WorkPartner
                                             DisplayName = displayName,
                                             ProcessName = processName,
                                             ExePath = executablePath,
-                                            IconPath = iconPath
+                                            IconPath = iconPath,
+                                            Icon = GetIcon(iconPath)
                                         };
                                     }
                                 }
@@ -150,16 +151,6 @@ namespace WorkPartner
                 }
                 catch { }
             }
-
-            // 모든 프로그램의 아이콘을 가져오는 작업은 UI 스레드가 아닌 백그라운드에서 진행합니다.
-            foreach (var program in programs.Values)
-            {
-                if (!string.IsNullOrEmpty(program.IconPath))
-                {
-                    program.Icon = GetIcon(program.IconPath);
-                }
-            }
-
             return programs.Values.OrderBy(p => p.DisplayName).ToList();
         }
 
@@ -271,7 +262,6 @@ namespace WorkPartner
                 else if (targetList == "Distraction") DistractionProcessInputTextBox.Text = selectedKeyword;
             }
         }
-
         private void AddWorkProcessButton_Click(object sender, RoutedEventArgs e)
         {
             var newProcess = WorkProcessInputTextBox.Text.Trim().ToLower();
