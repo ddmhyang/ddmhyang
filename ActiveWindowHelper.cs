@@ -122,13 +122,17 @@ namespace WorkPartner
 
                             foreach (AutomationElement tabItem in tabItems)
                             {
-                                string url = GetBrowserTabUrlForTabItem(tabItem);
+                                // 탭의 제목을 직접 가져옴
+                                string tabTitle = tabItem.Current.Name;
+                                if (string.IsNullOrWhiteSpace(tabTitle)) continue;
+
+                                // 탭의 URL을 가져오는 더 견고한 로직
+                                string url = GetUrlFromTabElement(tabItem);
 
                                 if (!string.IsNullOrWhiteSpace(url))
                                 {
                                     try
                                     {
-                                        string tabTitle = tabItem.Current.Name;
                                         string urlKeyword = new Uri(url).Host.ToLower();
                                         tabs.Add((tabTitle, urlKeyword));
                                     }
@@ -146,32 +150,18 @@ namespace WorkPartner
             return tabs;
         }
 
-        public static string GetBrowserTabUrlForTabItem(AutomationElement tabItem)
+        public static string GetUrlFromTabElement(AutomationElement tabItem)
         {
             try
             {
-                AutomationElement rootElement = tabItem;
-                while (rootElement.Current.ControlType != ControlType.Window)
+                // TabItem에서 Pattern을 찾아 URL을 가져오는 로직 (예: InvokePattern)
+                if (tabItem.TryGetCurrentPattern(SelectionItemPattern.Pattern, out object selectionPattern))
                 {
-                    rootElement = TreeWalker.ControlViewWalker.GetParent(rootElement);
-                    if (rootElement == null) return null;
-                }
+                    SelectionItemPattern selectedItem = (SelectionItemPattern)selectionPattern;
+                    selectedItem.Select(); // 탭을 선택하여 주소창 내용이 변경되도록 함
 
-                var addressBar = rootElement.FindFirst(TreeScope.Descendants,
-                    new AndCondition(
-                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
-                        new PropertyCondition(AutomationElement.NameProperty, "주소창 및 검색창")
-                    ));
-
-                if (addressBar == null)
-                {
-                    addressBar = rootElement.FindFirst(TreeScope.Descendants,
-                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
-                }
-
-                if (addressBar != null && addressBar.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
-                {
-                    return ((ValuePattern)pattern).Current.Value as string;
+                    // 현재 활성화된 탭의 URL을 가져오는 로직 재사용
+                    return GetActiveBrowserTabUrl();
                 }
             }
             catch { }

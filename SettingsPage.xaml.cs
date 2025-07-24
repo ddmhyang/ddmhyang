@@ -23,6 +23,7 @@ namespace WorkPartner
         private List<InstalledProgram> _allPrograms;
         private TextBox _currentTextBox;
 
+        // SettingsPage.xaml.cs
         public SettingsPage()
         {
             InitializeComponent();
