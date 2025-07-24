@@ -22,6 +22,11 @@
             <Setter Property="Margin" Value="0,0,0,15"/>
         </Style>
     </UserControl.Resources>
+    <ProgressBar Name="LoadingProgressBar"
+             IsIndeterminate="True"
+             Height="10"
+             VerticalAlignment="Top"
+             Visibility="Collapsed" />
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="20">
             <TextBlock Text="설정" Style="{StaticResource HeaderTextStyle}" FontSize="20"/>

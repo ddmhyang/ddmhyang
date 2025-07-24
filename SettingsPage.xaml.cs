@@ -26,11 +26,19 @@ namespace WorkPartner
         public SettingsPage()
         {
             InitializeComponent();
-            Settings = DataManager.LoadSettings(); // DataManager의 정적 메서드 사용
+            LoadSettings();
             UpdateUIFromSettings();
+
+            // 1. 로딩 시작 시 프로그레스 바를 보이게 함
+            LoadingProgressBar.Visibility = Visibility.Visible;
 
             BackgroundWorker worker = new BackgroundWorker();
             worker.DoWork += (s, e) => { _allPrograms = GetAllPrograms(); };
+            worker.RunWorkerCompleted += (s, e) =>
+            {
+                // 2. 작업 완료 시 프로그레스 바를 숨김
+                LoadingProgressBar.Visibility = Visibility.Collapsed;
+            };
             worker.RunWorkerAsync();
         }
 
@@ -309,7 +317,7 @@ namespace WorkPartner
             if (WorkProcessListBox.SelectedItem is string selected)
             {
                 Settings.WorkProcesses.Remove(selected);
-                SaveSettings();
+                DataManager.SaveSettingsAndNotify(Settings);
                 WorkProcessListBox.ItemsSource = null;
                 WorkProcessListBox.ItemsSource = Settings.WorkProcesses;
             }
