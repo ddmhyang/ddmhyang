@@ -76,6 +76,7 @@ namespace WorkPartner
             _predictionService = new PredictionService();
             _bgmPlayer = new MediaPlayer();
             _lastSuggestionTime = DateTime.MinValue;
+            _dataManager.SettingsUpdated += OnSettingsUpdated;
         }
 
         private void InitializeData()
@@ -95,6 +96,12 @@ namespace WorkPartner
                 _colorIndex++;
             }
             return _taskColors[taskName];
+        }
+
+        private void OnSettingsUpdated()
+        {
+            // 설정 파일 재로드
+            _settings = AppSettings.Load();
         }
 
         #region 데이터 저장 / 불러오기

@@ -1,4 +1,4 @@
-﻿// ActiveWindowHelper.cs (기존 내용을 모두 지우고 아래 코드로 교체)
+﻿// ActiveWindowHelper.cs (수정안)
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -27,7 +27,6 @@ namespace WorkPartner
         [DllImport("kernel32.dll")]
         private static extern uint GetTickCount();
 
-        // 윈도우 열거를 위한 P/Invoke
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -101,7 +100,6 @@ namespace WorkPartner
         public static List<(string Title, string UrlKeyword)> GetBrowserTabInfos(string browserProcessName)
         {
             var tabs = new List<(string Title, string UrlKeyword)>();
-            var addedTitles = new HashSet<string>();
             var processes = Process.GetProcessesByName(browserProcessName);
 
             foreach (var process in processes)
@@ -124,18 +122,13 @@ namespace WorkPartner
 
                             foreach (AutomationElement tabItem in tabItems)
                             {
-                                // 새로운 로직 시작: 기존 잘못된 로직을 이 위치에서 제거하고 아래 코드로 대체하세요.
-                                string tabTitle = tabItem.Current.Name;
-                                if (browserProcessName == "chrome") tabTitle = tabTitle.Replace(" - Google Chrome", "");
-                                else if (browserProcessName == "msedge") tabTitle = tabTitle.Replace(" - Microsoft Edge", "");
-                                else if (browserProcessName == "whale") tabTitle = tabTitle.Replace(" - Naver Whale", "");
+                                string url = GetBrowserTabUrlForTabItem(tabItem);
 
-                                string url = GetBrowserTabUrlForTabItem(tabItem); // <-- CS0103 오류를 해결하기 위해 이 메서드를 구현해야 합니다.
-
-                                if (!string.IsNullOrWhiteSpace(url) && addedTitles.Add(tabTitle))
+                                if (!string.IsNullOrWhiteSpace(url))
                                 {
                                     try
                                     {
+                                        string tabTitle = tabItem.Current.Name;
                                         string urlKeyword = new Uri(url).Host.ToLower();
                                         tabs.Add((tabTitle, urlKeyword));
                                     }
@@ -153,7 +146,40 @@ namespace WorkPartner
             return tabs;
         }
 
-    private static List<IntPtr> GetWindowHandlesForProcess(int processId)
+        public static string GetBrowserTabUrlForTabItem(AutomationElement tabItem)
+        {
+            try
+            {
+                AutomationElement rootElement = tabItem;
+                while (rootElement.Current.ControlType != ControlType.Window)
+                {
+                    rootElement = TreeWalker.ControlViewWalker.GetParent(rootElement);
+                    if (rootElement == null) return null;
+                }
+
+                var addressBar = rootElement.FindFirst(TreeScope.Descendants,
+                    new AndCondition(
+                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
+                        new PropertyCondition(AutomationElement.NameProperty, "주소창 및 검색창")
+                    ));
+
+                if (addressBar == null)
+                {
+                    addressBar = rootElement.FindFirst(TreeScope.Descendants,
+                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
+                }
+
+                if (addressBar != null && addressBar.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
+                {
+                    return ((ValuePattern)pattern).Current.Value as string;
+                }
+            }
+            catch { }
+
+            return null;
+        }
+
+        private static List<IntPtr> GetWindowHandlesForProcess(int processId)
         {
             var windowHandles = new List<IntPtr>();
             GCHandle gcHandles = GCHandle.Alloc(windowHandles);

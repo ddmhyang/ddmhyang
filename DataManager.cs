@@ -6,6 +6,7 @@ namespace WorkPartner
 {
     public static class DataManager
     {
+        public event Action SettingsUpdated;
         // 1. AppData 안에 우리 프로그램 전용 폴더 경로를 만듭니다.
         private static readonly string AppDataFolder;
 
@@ -39,6 +40,12 @@ namespace WorkPartner
 
             // 읽기 전용 파일은 설치 폴더 경로를 사용
             ItemsDbFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "items_db.json");
+        }
+
+        public void SaveSettingsAndNotify()
+        {
+            _settings.Save();
+            SettingsUpdated?.Invoke();
         }
 
         // AI 모델 파일과 같이, 처음에는 프로그램 폴더에 있다가
