@@ -5,9 +5,11 @@ namespace WorkPartner
 {
     public class InstalledProgram
     {
+        public string Id { get; set; }
         public string DisplayName { get; set; }
         public string ProcessName { get; set; }
+        public string ExePath { get; set; }
         public ImageSource Icon { get; set; }
-        public string IconPath { get; set; } // <-- 이 줄을 추가하세요!
+        public string IconPath { get; set; }
     }
 }
