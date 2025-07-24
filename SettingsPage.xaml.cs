@@ -33,6 +33,7 @@ namespace WorkPartner
             LoadSettings();
             UpdateUIFromSettings();
 
+            // 설정 페이지가 로드될 때 백그라운드에서 전체 프로그램 목록을 미리 불러옵니다.
             Task.Run(() => { _allPrograms = GetAllPrograms(); });
         }
 

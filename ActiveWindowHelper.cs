@@ -62,7 +62,7 @@ namespace WorkPartner
             catch { return "unknown"; }
         }
 
-        // [신규 추가] 카카오톡 등 창이 숨겨진 앱도 찾기 위한 메서드
+        // [핵심 수정] MainWindowTitle이 없는 앱(카카오톡 등)도 찾기 위한 메서드
         public static List<Process> GetVisibleWindowProcesses()
         {
             var processes = new List<Process>();
