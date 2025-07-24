@@ -1,15 +1,15 @@
-﻿// ActiveWindowHelper.cs (수정안)
+﻿// 파일: WorkPartner/ActiveWindowHelper.cs
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO; // <<-- 이 줄을 추가하세요!
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Automation;
-using System.Diagnostics; // Process 클래스를 사용하기 위해 추가
-using Newtonsoft.Json;  // JSON 처리를 위해 추가 (WorkPartner 프로젝트에도 Newtonsoft.Json 설치 필요)
-using Newtonsoft.Json.Linq; // JObject를 사용하기 위해 추가
-
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace WorkPartner
 {
@@ -30,14 +30,6 @@ namespace WorkPartner
         private static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
         [DllImport("kernel32.dll")]
         private static extern uint GetTickCount();
-
-        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool IsWindowVisible(IntPtr hWnd);
         #endregion
 
         public static string GetActiveProcessName()
@@ -107,13 +99,12 @@ namespace WorkPartner
             var addedTitles = new HashSet<string>();
 
             // 네이티브 호스트 실행 파일의 경로를 지정합니다.
-            // 이 경로는 실제 빌드된 경로에 맞게 조정해야 할 수 있습니다.
-            string hostPath = @"<YOUR_SOLUTION_PATH>\WorkPartner.NativeHost\bin\Debug\WorkPartner.NativeHost.exe";
+            // ⚠️ 중요: 아래 경로는 실제 프로젝트 환경에 맞게 수정해야 합니다!
+            string hostPath = @"C:\Users\kimgh\source\repos\WorkPartner\WorkPartner.NativeHost\bin\Debug\WorkPartner.NativeHost.exe";
 
             if (!File.Exists(hostPath))
             {
-                // 파일이 없을 경우, 사용자에게 알리거나 로깅할 수 있습니다.
-                // MessageBox.Show("네이티브 호스트를 찾을 수 없습니다.");
+                // 파일이 없을 경우, 빈 목록을 반환합니다.
                 return allTabs;
             }
 
@@ -130,7 +121,6 @@ namespace WorkPartner
 
             process.Start();
 
-            // 네이티브 호스트의 출력을 읽어옵니다.
             string output = process.StandardOutput.ReadToEnd();
             process.WaitForExit();
 
@@ -141,7 +131,6 @@ namespace WorkPartner
 
             try
             {
-                // 네이티브 호스트가 출력한 JSON을 파싱합니다.
                 var jsonResult = JObject.Parse(output);
                 var tabs = jsonResult["tabs"];
 
@@ -157,73 +146,12 @@ namespace WorkPartner
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // JSON 파싱 중 오류 처리
-                // MessageBox.Show("탭 정보를 파싱하는 중 오류 발생: " + ex.Message);
+                // JSON 파싱 중 오류가 발생해도 무시하고 계속 진행합니다.
             }
 
             return allTabs;
-        }
-
-        public static string GetBrowserTabUrlForTabItem(AutomationElement tabItem)
-        {
-            try
-            {
-                AutomationElement rootElement = tabItem;
-                while (rootElement.Current.ControlType != ControlType.Window)
-                {
-                    rootElement = TreeWalker.ControlViewWalker.GetParent(rootElement);
-                    if (rootElement == null) return null;
-                }
-
-                var addressBar = rootElement.FindFirst(TreeScope.Descendants,
-                    new AndCondition(
-                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
-                        new PropertyCondition(AutomationElement.NameProperty, "주소창 및 검색창")
-                    ));
-
-                if (addressBar == null)
-                {
-                    addressBar = rootElement.FindFirst(TreeScope.Descendants,
-                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
-                }
-
-                if (addressBar != null && addressBar.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
-                {
-                    return ((ValuePattern)pattern).Current.Value as string;
-                }
-            }
-            catch { }
-
-            return null;
-        }
-
-        private static List<IntPtr> GetWindowHandlesForProcess(int processId)
-        {
-            var windowHandles = new List<IntPtr>();
-            GCHandle gcHandles = GCHandle.Alloc(windowHandles);
-            try
-            {
-                EnumWindows(new EnumWindowsProc((hWnd, lParam) =>
-                {
-                    GetWindowThreadProcessId(hWnd, out uint windowProcessId);
-                    if (windowProcessId == processId && IsWindowVisible(hWnd) && GetWindowTextLength(hWnd) > 0)
-                    {
-                        var list = GCHandle.FromIntPtr(lParam).Target as List<IntPtr>;
-                        list.Add(hWnd);
-                    }
-                    return true;
-                }), GCHandle.ToIntPtr(gcHandles));
-            }
-            finally
-            {
-                if (gcHandles.IsAllocated)
-                {
-                    gcHandles.Free();
-                }
-            }
-            return windowHandles;
         }
 
         public static TimeSpan GetIdleTime()
