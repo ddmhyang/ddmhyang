@@ -62,7 +62,8 @@
                             <TextBox x:Name="WorkProcessInputTextBox" ToolTip="프로그램/사이트 키워드를 입력하세요."/>
                             <Button Content="실행 중인 앱에서 선택" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Work"/>
 
-                            <Button Content="현재 활성 탭 추가" Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Work"/>
+                            <Button Content="3초 후 활성 탭 추가" ToolTip="버튼을 누른 후 3초 안에 원하는 브라우저 탭을 클릭하세요." Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Work"/>
+
 
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -80,7 +81,7 @@
                             <TextBox x:Name="PassiveProcessInputTextBox" ToolTip="프로그램/사이트 키워드를 입력하세요."/>
                             <Button Content="실행 중인 앱에서 선택" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Passive"/>
 
-                            <Button Content="현재 활성 탭 추가" Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Passive"/>
+                            <Button Content="3초 후 활성 탭 추가" ToolTip="버튼을 누른 후 3초 안에 원하는 브라우저 탭을 클릭하세요." Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Passive"/>
 
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -98,7 +99,9 @@
                             <TextBox x:Name="DistractionProcessInputTextBox" ToolTip="프로그램/사이트 키워드를 입력하세요."/>
                             <Button Content="실행 중인 앱에서 선택" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Distraction"/>
 
-                            <Button Content="현재 활성 탭 추가" Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Distraction"/>
+
+
+                            <Button Content="3초 후 활성 탭 추가" ToolTip="버튼을 누른 후 3초 안에 원하는 브라우저 탭을 클릭하세요." Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Distraction"/>
 
                             <Grid>
                                 <Grid.ColumnDefinitions>

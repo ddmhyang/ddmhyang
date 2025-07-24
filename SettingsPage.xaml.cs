@@ -1,4 +1,5 @@
-﻿// SettingsPage.xaml.cs (기존 내용을 모두 지우고 아래 코드로 교체)
+﻿// 파일: SettingsPage.xaml.cs
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -9,9 +10,9 @@ using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading; // 타이머를 위해 추가
 using Microsoft.Win32;
 
 namespace WorkPartner
@@ -21,40 +22,29 @@ namespace WorkPartner
         private readonly string _settingsFilePath = DataManager.SettingsFilePath;
         public AppSettings Settings { get; set; }
         private List<InstalledProgram> _allPrograms;
-        private TextBox _currentTextBox;
+        private string _targetProcessList; // 3초 타이머가 어느 목록에 추가할지 기억하기 위한 변수
 
-        // SettingsPage.xaml.cs
         public SettingsPage()
         {
             InitializeComponent();
             LoadSettings();
             UpdateUIFromSettings();
 
-            // 로딩 시작 시 프로그레스 바를 보이게 함
-            LoadingProgressBar.Visibility = Visibility.Visible;
-
+            // 프로그램 목록을 백그라운드에서 불러옵니다.
             BackgroundWorker worker = new BackgroundWorker();
             worker.DoWork += (s, e) => { _allPrograms = GetAllPrograms(); };
-            worker.RunWorkerCompleted += (s, e) =>
-            {
-                // 작업 완료 시 프로그레스 바를 숨김
-                LoadingProgressBar.Visibility = Visibility.Collapsed;
-            };
+            worker.RunWorkerCompleted += (s, e) => { };
             worker.RunWorkerAsync();
         }
 
         #region 데이터 로드 및 저장
-        // LoadSettings와 SaveSettings 메서드를 제거하거나 DataManager의 정적 메서드를 호출하도록 수정
         private void LoadSettings()
         {
-            // DataManager.LoadSettings()를 호출하도록 변경
             Settings = DataManager.LoadSettings();
         }
 
-        // SaveSettings 메서드를 제거하거나 DataManager.SaveSettings()를 호출하도록 변경
         private void SaveSettings()
         {
-            // DataManager.SaveSettings()를 호출하도록 변경
             DataManager.SaveSettings(Settings);
         }
 
@@ -72,73 +62,7 @@ namespace WorkPartner
         }
         #endregion
 
-        #region 자동 완성 검색 로직
-        private void ProcessInputTextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (_allPrograms == null || _allPrograms.Count == 0) return;
-
-            _currentTextBox = sender as TextBox;
-            string searchText = _currentTextBox.Text.ToLower();
-
-            var (popup, suggestionListBox) = GetControlsForTextBox(_currentTextBox);
-            if (popup == null) return;
-
-            if (string.IsNullOrWhiteSpace(searchText))
-            {
-                popup.IsOpen = false;
-                return;
-            }
-
-            var suggestions = _allPrograms.Where(p => p.DisplayName.ToLower().Contains(searchText) || p.ProcessName.ToLower().Contains(searchText)).ToList();
-            if (suggestions.Any())
-            {
-                suggestionListBox.ItemsSource = suggestions;
-                popup.IsOpen = true;
-            }
-            else
-            {
-                popup.IsOpen = false;
-            }
-        }
-
-        private void SuggestionListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            var listBox = sender as ListBox;
-            var (popup, _) = GetControlsForListBox(listBox);
-            if (popup != null && listBox.SelectedItem is InstalledProgram selectedProgram && _currentTextBox != null)
-            {
-                _currentTextBox.Text = selectedProgram.ProcessName;
-                popup.IsOpen = false;
-            }
-        }
-
-        private void ProcessInputTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            var popup = GetControlsForTextBox(sender as TextBox).Popup;
-            if (popup != null && !popup.IsMouseOver)
-            {
-                popup.IsOpen = false;
-            }
-        }
-
-        private (Popup Popup, ListBox ListBox) GetControlsForTextBox(TextBox textBox)
-        {
-            if (textBox == WorkProcessInputTextBox) return (WorkProcessPopup, WorkProcessSuggestionListBox);
-            if (textBox == PassiveProcessInputTextBox) return (PassiveProcessPopup, PassiveProcessSuggestionListBox);
-            if (textBox == DistractionProcessInputTextBox) return (DistractionProcessPopup, DistractionProcessSuggestionListBox);
-            return (null, null);
-        }
-
-        private (Popup Popup, ListBox ListBox) GetControlsForListBox(ListBox listBox)
-        {
-            if (listBox == WorkProcessSuggestionListBox) return (WorkProcessPopup, WorkProcessSuggestionListBox);
-            if (listBox == PassiveProcessSuggestionListBox) return (PassiveProcessPopup, PassiveProcessSuggestionListBox);
-            if (listBox == DistractionProcessSuggestionListBox) return (DistractionProcessPopup, DistractionProcessSuggestionListBox);
-            return (null, null);
-        }
-        #endregion
-
-        #region 프로그램 목록 및 아이콘 추출 로직
+        #region 프로그램/아이콘 관련 로직
         private List<InstalledProgram> GetAllPrograms()
         {
             var programs = new Dictionary<string, InstalledProgram>();
@@ -200,7 +124,7 @@ namespace WorkPartner
 
         private BitmapSource GetIcon(string filePath)
         {
-            if (string.IsNullOrEmpty(filePath)) return null;
+            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return null;
             try
             {
                 using (Icon icon = Icon.ExtractAssociatedIcon(filePath))
@@ -212,22 +136,19 @@ namespace WorkPartner
         }
         #endregion
 
-        #region 버튼 이벤트 핸들러
-        // 파일: SettingsPage.xaml.cs
-
+        #region UI 이벤트 핸들러
         private void SelectRunningAppButton_Click(object sender, RoutedEventArgs e)
         {
             var allRunningApps = new List<InstalledProgram>();
             var addedProcesses = new HashSet<string>();
 
-            // 1. 실행 중인 일반 프로그램 목록만 가져옵니다.
-            var runningProcesses = Process.GetProcesses().Where(p => !string.IsNullOrEmpty(p.MainWindowTitle));
+            var runningProcesses = Process.GetProcesses().Where(p => !string.IsNullOrEmpty(p.MainWindowTitle) && p.MainWindowHandle != IntPtr.Zero);
             foreach (var process in runningProcesses)
             {
                 try
                 {
                     string processName = process.ProcessName.ToLower();
-                    if (addedProcesses.Contains(processName)) continue;
+                    if (addedProcesses.Contains(processName) || new[] { "chrome", "msedge", "whale" }.Contains(processName)) continue;
 
                     allRunningApps.Add(new InstalledProgram
                     {
@@ -237,19 +158,16 @@ namespace WorkPartner
                     });
                     addedProcesses.Add(processName);
                 }
-                catch { /* 접근 권한 없는 프로세스는 무시 */ }
+                catch { }
             }
 
-            // 2. 목록 정렬 및 선택 창 표시 (웹사이트 관련 로직 완전 삭제)
             var sortedApps = allRunningApps.OrderBy(p => p.DisplayName).ToList();
-
             if (!sortedApps.Any())
             {
                 MessageBox.Show("목록에 표시할 실행 중인 프로그램이 없습니다.");
                 return;
             }
 
-            // AppSelectionWindow에 프로그램 목록만 넘겨줍니다.
             var selectionWindow = new AppSelectionWindow(sortedApps) { Owner = Window.GetWindow(this) };
             if (selectionWindow.ShowDialog() == true)
             {
@@ -263,6 +181,75 @@ namespace WorkPartner
             }
         }
 
+        private void AddActiveTabButton_Click(object sender, RoutedEventArgs e)
+        {
+            _targetProcessList = (sender as Button)?.Tag as string;
+
+            // [수정] 안내 메시지 박스를 제거했습니다.
+            // MessageBox.Show("3초 안에 추가하고 싶은 브라우저 탭을 클릭하여 활성화하세요.", "알림");
+
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+            timer.Tick += (s, args) =>
+            {
+                timer.Stop();
+                string activeUrl = ActiveWindowHelper.GetActiveBrowserTabUrl();
+
+                if (string.IsNullOrEmpty(activeUrl))
+                {
+                    // 실패한 경우에도 팝업을 띄우지 않습니다.
+                    return;
+                }
+
+                string urlKeyword;
+                try
+                {
+                    urlKeyword = new Uri(activeUrl).Host.ToLower();
+                }
+                catch
+                {
+                    return;
+                }
+
+                bool added = false;
+                if (_targetProcessList == "Work")
+                {
+                    if (!Settings.WorkProcesses.Contains(urlKeyword))
+                    {
+                        Settings.WorkProcesses.Add(urlKeyword);
+                        WorkProcessListBox.ItemsSource = null;
+                        WorkProcessListBox.ItemsSource = Settings.WorkProcesses;
+                        added = true;
+                    }
+                }
+                else if (_targetProcessList == "Passive")
+                {
+                    if (!Settings.PassiveProcesses.Contains(urlKeyword))
+                    {
+                        Settings.PassiveProcesses.Add(urlKeyword);
+                        PassiveProcessListBox.ItemsSource = null;
+                        PassiveProcessListBox.ItemsSource = Settings.PassiveProcesses;
+                        added = true;
+                    }
+                }
+                else if (_targetProcessList == "Distraction")
+                {
+                    if (!Settings.DistractionProcesses.Contains(urlKeyword))
+                    {
+                        Settings.DistractionProcesses.Add(urlKeyword);
+                        DistractionProcessListBox.ItemsSource = null;
+                        DistractionProcessListBox.ItemsSource = Settings.DistractionProcesses;
+                        added = true;
+                    }
+                }
+
+                if (added)
+                {
+                    DataManager.SaveSettingsAndNotify(Settings);
+                }
+            };
+            timer.Start();
+        }
+
         private void AddWorkProcessButton_Click(object sender, RoutedEventArgs e)
         {
             var newProcess = WorkProcessInputTextBox.Text.Trim().ToLower();
@@ -270,7 +257,6 @@ namespace WorkPartner
             {
                 Settings.WorkProcesses.Add(newProcess);
                 WorkProcessInputTextBox.Clear();
-                // DataManager의 정적 메서드 호출
                 DataManager.SaveSettingsAndNotify(Settings);
                 WorkProcessListBox.ItemsSource = null;
                 WorkProcessListBox.ItemsSource = Settings.WorkProcesses;
@@ -348,7 +334,7 @@ namespace WorkPartner
                 Settings.IsMiniTimerEnabled = MiniTimerCheckBox.IsChecked ?? false;
                 (Application.Current.MainWindow as MainWindow)?.ToggleMiniTimer();
             }
-            DataManager.SaveSettingsAndNotify(Settings); // DataManager의 정적 메서드 호출
+            DataManager.SaveSettingsAndNotify(Settings);
         }
 
         private void Setting_Changed_IdleTimeout(object sender, TextChangedEventArgs e)
@@ -455,52 +441,5 @@ namespace WorkPartner
             }
         }
         #endregion
-        // 파일: SettingsPage.xaml.cs
-
-        private void AddActiveTabButton_Click(object sender, RoutedEventArgs e)
-        {
-            string activeUrl = ActiveWindowHelper.GetActiveBrowserTabUrl();
-
-            if (string.IsNullOrEmpty(activeUrl))
-            {
-                MessageBox.Show("활성화된 브라우저 탭을 찾을 수 없습니다. 브라우저를 먼저 클릭해주세요.", "알림");
-                return;
-            }
-
-            string urlKeyword = "N/A";
-            try
-            {
-                if (Uri.IsWellFormedUriString(activeUrl, UriKind.Absolute))
-                {
-                    urlKeyword = new Uri(activeUrl).Host.ToLower();
-                }
-                else
-                {
-                    MessageBox.Show("유효한 웹사이트 주소가 아닙니다.", "알림");
-                    return;
-                }
-            }
-            catch
-            {
-                MessageBox.Show("웹사이트 주소를 분석하는 데 실패했습니다.", "오류");
-                return;
-            }
-
-            // 어느 목록에 추가할지 버튼의 Tag로 결정합니다.
-            string targetList = (sender as Button)?.Tag as string;
-
-            if (targetList == "Work")
-            {
-                WorkProcessInputTextBox.Text = urlKeyword;
-            }
-            else if (targetList == "Passive")
-            {
-                PassiveProcessInputTextBox.Text = urlKeyword;
-            }
-            else if (targetList == "Distraction")
-            {
-                DistractionProcessInputTextBox.Text = urlKeyword;
-            }
-        }
     }
 }
