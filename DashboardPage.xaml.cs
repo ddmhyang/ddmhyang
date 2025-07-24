@@ -221,6 +221,7 @@ namespace WorkPartner
         private void HandleStopwatchMode()
         {
             string activeProcess = ActiveWindowHelper.GetActiveProcessName();
+            string activeTitle = ActiveWindowHelper.GetActiveWindowTitle().ToLower();
             string activeUrl = ActiveWindowHelper.GetActiveBrowserTabUrl();
             string urlHost = null;
 
@@ -231,9 +232,18 @@ namespace WorkPartner
 
             ActiveProcessDisplay.Text = $"활성: {activeProcess}" + (urlHost != null ? $" ({urlHost})" : "");
 
-            bool isDistraction = _settings.DistractionProcesses.Any(p =>
-                activeProcess.Contains(p) || (urlHost != null && urlHost.Contains(p))
-            );
+            // 등록된 키워드와 일치하는지 확인하는 함수
+            bool IsMatch(IEnumerable<string> keywords)
+            {
+                if (keywords == null || !keywords.Any()) return false;
+                return keywords.Any(p =>
+                    activeProcess.Contains(p) ||
+                    (urlHost != null && urlHost.Contains(p)) ||
+                    activeTitle.Contains(p)
+                );
+            }
+
+            bool isDistraction = IsMatch(_settings.DistractionProcesses);
 
             if (isDistraction)
             {
@@ -243,13 +253,8 @@ namespace WorkPartner
                 return;
             }
 
-            bool isTrackable = _settings.WorkProcesses.Any(p =>
-                activeProcess.Contains(p) || (urlHost != null && urlHost.Contains(p))
-            );
-
-            bool isPassive = _settings.PassiveProcesses.Any(p =>
-                activeProcess.Contains(p) || (urlHost != null && urlHost.Contains(p))
-            );
+            bool isTrackable = IsMatch(_settings.WorkProcesses);
+            bool isPassive = IsMatch(_settings.PassiveProcesses);
 
             if (isTrackable || isPassive)
             {

@@ -206,18 +206,18 @@ namespace WorkPartner
                 var addedProcesses = new HashSet<string>();
                 var runningProcesses = ActiveWindowHelper.GetVisibleWindowProcesses();
 
-                foreach (var process in runningProcesses)
+                foreach (var info in runningProcesses)
                 {
                     try
                     {
-                        string processName = process.ProcessName.ToLower();
-                        if (addedProcesses.Contains(processName) || string.IsNullOrEmpty(process.MainWindowTitle)) continue;
+                        string processName = info.Process.ProcessName.ToLower();
+                        if (addedProcesses.Contains(processName) || string.IsNullOrEmpty(info.WindowTitle)) continue;
 
                         allRunningApps.Add(new InstalledProgram
                         {
-                            DisplayName = process.MainWindowTitle,
+                            DisplayName = info.WindowTitle,
                             ProcessName = processName,
-                            Icon = GetIcon(process.MainModule.FileName)
+                            Icon = GetIcon(info.Process.MainModule.FileName)
                         });
                         addedProcesses.Add(processName);
                     }

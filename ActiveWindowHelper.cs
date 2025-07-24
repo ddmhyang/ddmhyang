@@ -10,6 +10,13 @@ using System.Windows.Automation;
 
 namespace WorkPartner
 {
+    // [신규 추가] 프로세스와 창 제목을 함께 담기 위한 구조체
+    public struct ProcessInfo
+    {
+        public Process Process { get; set; }
+        public string WindowTitle { get; set; }
+    }
+
     public static class ActiveWindowHelper
     {
         #region Windows API Imports
@@ -63,9 +70,9 @@ namespace WorkPartner
         }
 
         // [핵심 수정] MainWindowTitle이 없는 앱(카카오톡 등)도 찾기 위한 메서드
-        public static List<Process> GetVisibleWindowProcesses()
+        public static List<ProcessInfo> GetVisibleWindowProcesses()
         {
-            var processes = new List<Process>();
+            var processInfos = new List<ProcessInfo>();
             var processIds = new HashSet<uint>();
 
             EnumWindows(delegate (IntPtr hWnd, IntPtr lParam)
@@ -78,7 +85,11 @@ namespace WorkPartner
                         try
                         {
                             Process p = Process.GetProcessById((int)processId);
-                            processes.Add(p);
+                            int length = GetWindowTextLength(hWnd) + 1;
+                            StringBuilder sb = new StringBuilder(length);
+                            GetWindowText(hWnd, sb, length);
+
+                            processInfos.Add(new ProcessInfo { Process = p, WindowTitle = sb.ToString() });
                             processIds.Add(processId);
                         }
                         catch { /* 프로세스가 이미 종료된 경우 등 예외 무시 */ }
@@ -86,7 +97,7 @@ namespace WorkPartner
                 }
                 return true;
             }, IntPtr.Zero);
-            return processes;
+            return processInfos;
         }
 
         public static string GetActiveBrowserTabUrl()
