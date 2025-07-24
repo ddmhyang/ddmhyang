@@ -71,7 +71,10 @@ namespace WorkPartner
                 GetWindowThreadProcessId(handle, out uint processId);
                 var process = Process.GetProcessById((int)processId);
 
-                if (process.ProcessName.ToLower() != "chrome" && process.ProcessName.ToLower() != "msedge" && process.ProcessName.ToLower() != "whale") return null;
+                // Edge, Chrome, Whale 프로세스만 대상으로 함
+                if (process.ProcessName.ToLower() != "chrome" &&
+                    process.ProcessName.ToLower() != "msedge" &&
+                    process.ProcessName.ToLower() != "whale") return null;
 
                 var element = AutomationElement.FromHandle(handle);
                 if (element == null) return null;
@@ -97,77 +100,29 @@ namespace WorkPartner
             return null;
         }
 
-        public static List<(string Title, string UrlKeyword)> GetBrowserTabInfos(string browserProcessName)
+        // 새 GetRunningBrowserInfos 메서드: 현재 활성화된 브라우저 탭의 정보만 가져옵니다.
+        public static List<(string Title, string UrlKeyword)> GetRunningBrowserInfos()
         {
             var tabs = new List<(string Title, string UrlKeyword)>();
-            var processes = Process.GetProcessesByName(browserProcessName);
-
-            foreach (var process in processes)
-            {
-                List<IntPtr> windowHandles = GetWindowHandlesForProcess(process.Id);
-
-                foreach (var handle in windowHandles)
-                {
-                    try
-                    {
-                        var rootElement = AutomationElement.FromHandle(handle);
-                        if (rootElement == null) continue;
-
-                        var tabContainerCondition = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Tab);
-                        var tabContainer = rootElement.FindFirst(TreeScope.Descendants, tabContainerCondition);
-
-                        if (tabContainer != null)
-                        {
-                            var tabItems = tabContainer.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem));
-
-                            foreach (AutomationElement tabItem in tabItems)
-                            {
-                                // 탭의 제목을 직접 가져옴
-                                string tabTitle = tabItem.Current.Name;
-                                if (string.IsNullOrWhiteSpace(tabTitle)) continue;
-
-                                // 탭의 URL을 가져오는 더 견고한 로직
-                                string url = GetUrlFromTabElement(tabItem);
-
-                                if (!string.IsNullOrWhiteSpace(url))
-                                {
-                                    try
-                                    {
-                                        string urlKeyword = new Uri(url).Host.ToLower();
-                                        tabs.Add((tabTitle, urlKeyword));
-                                    }
-                                    catch (UriFormatException)
-                                    {
-                                        // URL 형식이 유효하지 않은 경우
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    catch { }
-                }
-            }
-            return tabs;
-        }
-
-        public static string GetUrlFromTabElement(AutomationElement tabItem)
-        {
             try
             {
-                // TabItem에서 Pattern을 찾아 URL을 가져오는 로직 (예: InvokePattern)
-                if (tabItem.TryGetCurrentPattern(SelectionItemPattern.Pattern, out object selectionPattern))
-                {
-                    SelectionItemPattern selectedItem = (SelectionItemPattern)selectionPattern;
-                    selectedItem.Select(); // 탭을 선택하여 주소창 내용이 변경되도록 함
+                IntPtr handle = GetForegroundWindow();
+                if (handle == IntPtr.Zero) return tabs;
 
-                    // 현재 활성화된 탭의 URL을 가져오는 로직 재사용
-                    return GetActiveBrowserTabUrl();
+                string windowTitle = GetActiveWindowTitle();
+                string url = GetActiveBrowserTabUrl();
+
+                if (!string.IsNullOrWhiteSpace(url))
+                {
+                    string urlKeyword = new Uri(url).Host.ToLower();
+                    tabs.Add((windowTitle, urlKeyword));
                 }
             }
             catch { }
-
-            return null;
+            return tabs;
         }
+
+        // 기존 GetBrowserTabInfos와 GetUrlFromTabElement 메서드는 삭제합니다.
 
         private static List<IntPtr> GetWindowHandlesForProcess(int processId)
         {

@@ -141,53 +141,78 @@ namespace WorkPartner
         #region 프로그램 목록 및 아이콘 추출 로직
         private List<InstalledProgram> GetAllPrograms()
         {
-            var programs = new Dictionary<string, InstalledProgram>();
-            string registryPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
-            var registryViews = new[] { RegistryView.Registry32, RegistryView.Registry64 };
+            var programs = new List<InstalledProgram>();
+            var uninstallKeys = new List<string>
+        {
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+            @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+        };
 
-            foreach (var view in registryViews)
+            // 로컬 머신 (64비트)과 현재 사용자 (32비트) 레지스트리에서 모두 확인
+            foreach (var keyPath in uninstallKeys)
             {
-                try
-                {
-                    using (var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view))
-                    using (var key = baseKey.OpenSubKey(registryPath))
-                    {
-                        if (key == null) continue;
-                        foreach (string subkeyName in key.GetSubKeyNames())
-                        {
-                            using (RegistryKey subkey = key.OpenSubKey(subkeyName))
-                            {
-                                if (subkey == null) continue;
-                                var displayName = subkey.GetValue("DisplayName") as string;
-                                var iconPath = subkey.GetValue("DisplayIcon") as string;
-                                var systemComponent = subkey.GetValue("SystemComponent") as int?;
+                AddProgramsFromRegistry(Registry.LocalMachine, keyPath, programs);
+                AddProgramsFromRegistry(Registry.CurrentUser, keyPath, programs);
+            }
 
-                                if (!string.IsNullOrWhiteSpace(displayName) && systemComponent != 1)
-                                {
-                                    string executablePath = GetExecutablePathFromIconPath(iconPath);
-                                    if (string.IsNullOrEmpty(executablePath)) continue;
-                                    string processName = Path.GetFileNameWithoutExtension(executablePath).ToLower();
-                                    if (!programs.ContainsKey(processName))
-                                    {
-                                        programs[processName] = new InstalledProgram { DisplayName = displayName, ProcessName = processName, IconPath = executablePath };
-                                    }
-                                }
-                            }
+            // 실행 중인 앱 목록 추가 (브라우저 탭 포함)
+            programs.AddRange(GetRunningApps());
+
+            // 중복 제거 및 정렬
+            return programs.GroupBy(p => p.Id).Select(g => g.First()).OrderBy(p => p.DisplayName).ToList();
+        }
+
+        private void AddProgramsFromRegistry(RegistryKey baseKey, string keyPath, List<InstalledProgram> programs)
+        {
+            using (var key = baseKey.OpenSubKey(keyPath))
+            {
+                if (key == null) return;
+                foreach (var subkeyName in key.GetSubKeyNames())
+                {
+                    using (var subkey = key.OpenSubKey(subkeyName))
+                    {
+                        if (subkey == null) continue;
+                        var displayName = subkey.GetValue("DisplayName") as string;
+                        var installLocation = subkey.GetValue("InstallLocation") as string;
+                        var displayIcon = subkey.GetValue("DisplayIcon") as string;
+
+                        if (!string.IsNullOrWhiteSpace(displayName) && !string.IsNullOrWhiteSpace(installLocation))
+                        {
+                            var icon = GetIcon(displayIcon);
+                            programs.Add(new InstalledProgram { DisplayName = displayName, ExePath = installLocation, Icon = icon });
                         }
                     }
                 }
-                catch { }
             }
+        }
 
-            Application.Current.Dispatcher.Invoke(() =>
+        private List<InstalledProgram> GetRunningApps()
+        {
+            var runningApps = new List<InstalledProgram>();
+            var processes = Process.GetProcesses().Where(p => !string.IsNullOrEmpty(p.MainWindowTitle)).ToList();
+
+            foreach (var process in processes)
             {
-                foreach (var program in programs.Values)
-                {
-                    program.Icon = GetIcon(program.IconPath);
-                }
-            });
+                var icon = GetProcessIcon(process);
+                var appName = process.ProcessName.ToLower();
 
-            return programs.Values.OrderBy(p => p.DisplayName).ToList();
+                // 브라우저 탭 목록을 가져와서 추가
+                if (appName == "chrome" || appName == "msedge" || appName == "whale")
+                {
+                    // GetRunningBrowserInfos는 수정된 ActiveWindowHelper의 메서드입니다.
+                    var browserTabs = ActiveWindowHelper.GetRunningBrowserInfos();
+                    foreach (var tab in browserTabs)
+                    {
+                        runningApps.Add(new InstalledProgram { DisplayName = tab.Title, ExePath = tab.UrlKeyword, Icon = icon });
+                    }
+                }
+                else
+                {
+                    // 일반 앱 추가
+                    runningApps.Add(new InstalledProgram { DisplayName = process.MainWindowTitle, ExePath = appName, Icon = icon });
+                }
+            }
+            return runningApps;
         }
 
         private string GetExecutablePathFromIconPath(string iconPath)
