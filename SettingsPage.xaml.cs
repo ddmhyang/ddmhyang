@@ -1,4 +1,4 @@
-﻿// 파일: SettingsPage.xaml.cs
+﻿// 파일: SettingsPage.xaml.cs (오류 수정 및 기능 복원)
 
 using System;
 using System.Collections.Generic;
@@ -8,11 +8,13 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives; // Popup을 위해 추가
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
-using System.Windows.Threading; // 타이머를 위해 추가
+using System.Windows.Threading;
 using Microsoft.Win32;
 
 namespace WorkPartner
@@ -22,7 +24,8 @@ namespace WorkPartner
         private readonly string _settingsFilePath = DataManager.SettingsFilePath;
         public AppSettings Settings { get; set; }
         private List<InstalledProgram> _allPrograms;
-        private string _targetProcessList; // 3초 타이머가 어느 목록에 추가할지 기억하기 위한 변수
+        private string _targetProcessList;
+        private TextBox _currentTextBox; // 자동 완성을 위해 추가
 
         public SettingsPage()
         {
@@ -30,24 +33,12 @@ namespace WorkPartner
             LoadSettings();
             UpdateUIFromSettings();
 
-            // 프로그램 목록을 백그라운드에서 불러옵니다.
-            BackgroundWorker worker = new BackgroundWorker();
-            worker.DoWork += (s, e) => { _allPrograms = GetAllPrograms(); };
-            worker.RunWorkerCompleted += (s, e) => { };
-            worker.RunWorkerAsync();
+            Task.Run(() => { _allPrograms = GetAllPrograms(); });
         }
 
         #region 데이터 로드 및 저장
-        private void LoadSettings()
-        {
-            Settings = DataManager.LoadSettings();
-        }
-
-        private void SaveSettings()
-        {
-            DataManager.SaveSettings(Settings);
-        }
-
+        private void LoadSettings() { Settings = DataManager.LoadSettings(); }
+        private void SaveSettings() { DataManager.SaveSettings(Settings); }
         private void UpdateUIFromSettings()
         {
             IdleDetectionCheckBox.IsChecked = Settings.IsIdleDetectionEnabled;
@@ -103,13 +94,10 @@ namespace WorkPartner
                 catch { }
             }
 
-            Application.Current.Dispatcher.Invoke(() =>
+            foreach (var program in programs.Values)
             {
-                foreach (var program in programs.Values)
-                {
-                    program.Icon = GetIcon(program.IconPath);
-                }
-            });
+                program.Icon = GetIcon(program.IconPath);
+            }
 
             return programs.Values.OrderBy(p => p.DisplayName).ToList();
         }
@@ -121,7 +109,7 @@ namespace WorkPartner
             if (File.Exists(executablePath)) return executablePath;
             return null;
         }
-        
+
         private BitmapSource GetIcon(string filePath)
         {
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return null;
@@ -129,39 +117,117 @@ namespace WorkPartner
             {
                 using (Icon icon = Icon.ExtractAssociatedIcon(filePath))
                 {
-                    return Imaging.CreateBitmapSourceFromHIcon(icon.Handle, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+                    var bs = Imaging.CreateBitmapSourceFromHIcon(icon.Handle, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+                    bs.Freeze();
+                    return bs;
                 }
             }
             catch { return null; }
         }
         #endregion
 
-        #region UI 이벤트 핸들러
-        private void SelectRunningAppButton_Click(object sender, RoutedEventArgs e)
+        #region 자동 완성 검색 로직 (복원)
+        private void ProcessInputTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            var allRunningApps = new List<InstalledProgram>();
-            var addedProcesses = new HashSet<string>();
+            if (_allPrograms == null || _allPrograms.Count == 0) return;
 
-            var runningProcesses = Process.GetProcesses().Where(p => !string.IsNullOrEmpty(p.MainWindowTitle) && p.MainWindowHandle != IntPtr.Zero);
-            foreach (var process in runningProcesses)
+            _currentTextBox = sender as TextBox;
+            string searchText = _currentTextBox.Text.ToLower();
+
+            var (popup, suggestionListBox) = GetControlsForTextBox(_currentTextBox);
+            if (popup == null) return;
+
+            if (string.IsNullOrWhiteSpace(searchText))
             {
-                try
-                {
-                    string processName = process.ProcessName.ToLower();
-                    if (addedProcesses.Contains(processName) || new[] { "chrome", "msedge", "whale" }.Contains(processName)) continue;
-
-                    allRunningApps.Add(new InstalledProgram
-                    {
-                        DisplayName = process.MainWindowTitle,
-                        ProcessName = processName,
-                        Icon = GetIcon(process.MainModule.FileName)
-                    });
-                    addedProcesses.Add(processName);
-                }
-                catch { }
+                popup.IsOpen = false;
+                return;
             }
 
-            var sortedApps = allRunningApps.OrderBy(p => p.DisplayName).ToList();
+            var suggestions = _allPrograms.Where(p => p.DisplayName.ToLower().Contains(searchText) || p.ProcessName.ToLower().Contains(searchText)).ToList();
+            if (suggestions.Any())
+            {
+                suggestionListBox.ItemsSource = suggestions;
+                popup.IsOpen = true;
+            }
+            else
+            {
+                popup.IsOpen = false;
+            }
+        }
+
+        private void SuggestionListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var listBox = sender as ListBox;
+            var (popup, _) = GetControlsForListBox(listBox);
+            if (popup != null && listBox.SelectedItem is InstalledProgram selectedProgram && _currentTextBox != null)
+            {
+                _currentTextBox.Text = selectedProgram.ProcessName;
+                popup.IsOpen = false;
+            }
+        }
+
+        private void ProcessInputTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            var popup = GetControlsForTextBox(sender as TextBox).Popup;
+            if (popup != null && !popup.IsMouseOver)
+            {
+                popup.IsOpen = false;
+            }
+        }
+
+        private (Popup Popup, ListBox ListBox) GetControlsForTextBox(TextBox textBox)
+        {
+            if (textBox == WorkProcessInputTextBox) return (WorkProcessPopup, WorkProcessSuggestionListBox);
+            if (textBox == PassiveProcessInputTextBox) return (PassiveProcessPopup, PassiveProcessSuggestionListBox);
+            if (textBox == DistractionProcessInputTextBox) return (DistractionProcessPopup, DistractionProcessSuggestionListBox);
+            return (null, null);
+        }
+
+        private (Popup Popup, ListBox ListBox) GetControlsForListBox(ListBox listBox)
+        {
+            if (listBox == WorkProcessSuggestionListBox) return (WorkProcessPopup, WorkProcessSuggestionListBox);
+            if (listBox == PassiveProcessSuggestionListBox) return (PassiveProcessPopup, PassiveProcessSuggestionListBox);
+            if (listBox == DistractionProcessSuggestionListBox) return (DistractionProcessPopup, DistractionProcessSuggestionListBox);
+            return (null, null);
+        }
+        #endregion
+
+        #region UI 이벤트 핸들러
+        private async void SelectRunningAppButton_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            button.IsEnabled = false;
+            LoadingProgressBar.Visibility = Visibility.Visible;
+
+            List<InstalledProgram> sortedApps = await Task.Run(() =>
+            {
+                var allRunningApps = new List<InstalledProgram>();
+                var addedProcesses = new HashSet<string>();
+                var runningProcesses = ActiveWindowHelper.GetVisibleWindowProcesses();
+
+                foreach (var process in runningProcesses)
+                {
+                    try
+                    {
+                        string processName = process.ProcessName.ToLower();
+                        if (addedProcesses.Contains(processName) || string.IsNullOrEmpty(process.MainWindowTitle)) continue;
+
+                        allRunningApps.Add(new InstalledProgram
+                        {
+                            DisplayName = process.MainWindowTitle,
+                            ProcessName = processName,
+                            Icon = GetIcon(process.MainModule.FileName)
+                        });
+                        addedProcesses.Add(processName);
+                    }
+                    catch { }
+                }
+                return allRunningApps.OrderBy(p => p.DisplayName).ToList();
+            });
+
+            LoadingProgressBar.Visibility = Visibility.Collapsed;
+            button.IsEnabled = true;
+
             if (!sortedApps.Any())
             {
                 MessageBox.Show("목록에 표시할 실행 중인 프로그램이 없습니다.");
@@ -184,68 +250,41 @@ namespace WorkPartner
         private void AddActiveTabButton_Click(object sender, RoutedEventArgs e)
         {
             _targetProcessList = (sender as Button)?.Tag as string;
-
-            // [수정] 안내 메시지 박스를 제거했습니다.
-            // MessageBox.Show("3초 안에 추가하고 싶은 브라우저 탭을 클릭하여 활성화하세요.", "알림");
-
             var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
             timer.Tick += (s, args) =>
             {
                 timer.Stop();
                 string activeUrl = ActiveWindowHelper.GetActiveBrowserTabUrl();
-
-                if (string.IsNullOrEmpty(activeUrl))
-                {
-                    // 실패한 경우에도 팝업을 띄우지 않습니다.
-                    return;
-                }
+                if (string.IsNullOrEmpty(activeUrl)) return;
 
                 string urlKeyword;
-                try
-                {
-                    urlKeyword = new Uri(activeUrl).Host.ToLower();
-                }
-                catch
-                {
-                    return;
-                }
+                try { urlKeyword = new Uri(activeUrl).Host.ToLower(); }
+                catch { return; }
 
                 bool added = false;
-                if (_targetProcessList == "Work")
+                if (_targetProcessList == "Work" && !Settings.WorkProcesses.Contains(urlKeyword))
                 {
-                    if (!Settings.WorkProcesses.Contains(urlKeyword))
-                    {
-                        Settings.WorkProcesses.Add(urlKeyword);
-                        WorkProcessListBox.ItemsSource = null;
-                        WorkProcessListBox.ItemsSource = Settings.WorkProcesses;
-                        added = true;
-                    }
+                    Settings.WorkProcesses.Add(urlKeyword);
+                    WorkProcessListBox.ItemsSource = null;
+                    WorkProcessListBox.ItemsSource = Settings.WorkProcesses;
+                    added = true;
                 }
-                else if (_targetProcessList == "Passive")
+                else if (_targetProcessList == "Passive" && !Settings.PassiveProcesses.Contains(urlKeyword))
                 {
-                    if (!Settings.PassiveProcesses.Contains(urlKeyword))
-                    {
-                        Settings.PassiveProcesses.Add(urlKeyword);
-                        PassiveProcessListBox.ItemsSource = null;
-                        PassiveProcessListBox.ItemsSource = Settings.PassiveProcesses;
-                        added = true;
-                    }
+                    Settings.PassiveProcesses.Add(urlKeyword);
+                    PassiveProcessListBox.ItemsSource = null;
+                    PassiveProcessListBox.ItemsSource = Settings.PassiveProcesses;
+                    added = true;
                 }
-                else if (_targetProcessList == "Distraction")
+                else if (_targetProcessList == "Distraction" && !Settings.DistractionProcesses.Contains(urlKeyword))
                 {
-                    if (!Settings.DistractionProcesses.Contains(urlKeyword))
-                    {
-                        Settings.DistractionProcesses.Add(urlKeyword);
-                        DistractionProcessListBox.ItemsSource = null;
-                        DistractionProcessListBox.ItemsSource = Settings.DistractionProcesses;
-                        added = true;
-                    }
+                    Settings.DistractionProcesses.Add(urlKeyword);
+                    DistractionProcessListBox.ItemsSource = null;
+                    DistractionProcessListBox.ItemsSource = Settings.DistractionProcesses;
+                    added = true;
                 }
 
-                if (added)
-                {
-                    DataManager.SaveSettingsAndNotify(Settings);
-                }
+                if (added) DataManager.SaveSettingsAndNotify(Settings);
             };
             timer.Start();
         }
