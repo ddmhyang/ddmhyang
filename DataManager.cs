@@ -6,7 +6,8 @@ namespace WorkPartner
 {
     public static class DataManager
     {
-        public event Action SettingsUpdated;
+        public static event Action SettingsUpdated;
+
         // 1. AppData 안에 우리 프로그램 전용 폴더 경로를 만듭니다.
         private static readonly string AppDataFolder;
 
@@ -42,9 +43,9 @@ namespace WorkPartner
             ItemsDbFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "items_db.json");
         }
 
-        public void SaveSettingsAndNotify()
+        public static void SaveSettingsAndNotify(AppSettings settings)
         {
-            _settings.Save();
+            settings.Save();
             SettingsUpdated?.Invoke();
         }
 

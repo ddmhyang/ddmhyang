@@ -76,7 +76,6 @@ namespace WorkPartner
             _predictionService = new PredictionService();
             _bgmPlayer = new MediaPlayer();
             _lastSuggestionTime = DateTime.MinValue;
-            _dataManager.SettingsUpdated += OnSettingsUpdated;
         }
 
         private void InitializeData()
@@ -100,8 +99,9 @@ namespace WorkPartner
 
         private void OnSettingsUpdated()
         {
-            // 설정 파일 재로드
+            // AppSettings.Load()는 인스턴스 메서드이므로, 새로운 인스턴스를 로드하여 갱신합니다.
             _settings = AppSettings.Load();
+            DataContext = _settings;
         }
 
         #region 데이터 저장 / 불러오기
