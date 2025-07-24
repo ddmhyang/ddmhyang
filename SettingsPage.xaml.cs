@@ -215,55 +215,31 @@ namespace WorkPartner
         #region 버튼 이벤트 핸들러
         private void SelectRunningAppButton_Click(object sender, RoutedEventArgs e)
         {
-            var allRunningApps = new List<InstalledProgram>();
-            var websites = new List<InstalledProgram>();
-            var browserProcesses = new HashSet<string> { "chrome", "msedge", "whale" };
-            var addedProcesses = new HashSet<string>();
+            var runningApps = new List<InstalledProgram>();
 
-            var runningProcesses = Process.GetProcesses().Where(p => !string.IsNullOrEmpty(p.MainWindowTitle));
+            // 기존의 ActiveWindowHelper.GetRunningAppInfos() 대신
+            // Process.GetProcesses()를 사용하여 앱 목록을 가져옵니다.
+            var allProcesses = Process.GetProcesses()
+                .Where(p => !string.IsNullOrWhiteSpace(p.MainWindowTitle) && p.MainWindowHandle != IntPtr.Zero)
+                .ToList();
 
-            foreach (var process in runningProcesses)
+            foreach (var process in allProcesses)
             {
-                try
+                var app = new InstalledProgram
                 {
-                    string processName = process.ProcessName.ToLower();
-                    if (!addedProcesses.Contains(processName))
-                    {
-                        allRunningApps.Add(new InstalledProgram { DisplayName = process.MainWindowTitle, ProcessName = processName, Icon = GetIcon(process.MainModule.FileName) });
-                        addedProcesses.Add(processName);
-                    }
-                }
-                catch { }
+                    DisplayName = process.MainWindowTitle,
+                    ProcessName = process.ProcessName
+                };
+                runningApps.Add(app);
             }
 
-            foreach (var browserName in browserProcesses)
-            {
-                var tabs = ActiveWindowHelper.GetBrowserTabInfos(browserName);
-                foreach (var tab in tabs)
-                {
-                    if (!websites.Any(w => w.DisplayName == tab.Title))
-                    {
-                        var browserProcess = Process.GetProcessesByName(browserName).FirstOrDefault();
-                        if (browserProcess != null)
-                        {
-                            websites.Add(new InstalledProgram { DisplayName = tab.Title, ProcessName = tab.UrlKeyword, Icon = GetIcon(browserProcess.MainModule.FileName) });
-                        }
-                    }
-                }
-            }
+            // 브라우저 탭 정보를 가져오는 새로운 헬퍼 메서드를 호출합니다.
+            runningApps.AddRange(BrowserTabHelper.GetAllBrowserTabs());
 
-            var sortedApps = allRunningApps.OrderBy(p => p.DisplayName).ToList();
-            var sortedWebsites = websites.OrderBy(p => p.DisplayName).ToList();
-
-            if (!sortedApps.Any())
-            {
-                MessageBox.Show("목록에 표시할 실행 중인 프로그램이 없습니다.");
-                return;
-            }
-
-            var selectionWindow = new AppSelectionWindow(sortedApps, sortedWebsites) { Owner = Window.GetWindow(this) };
+            var selectionWindow = new AppSelectionWindow(runningApps);
             if (selectionWindow.ShowDialog() == true)
             {
+                {
                 string selectedKeyword = selectionWindow.SelectedAppKeyword;
                 if (string.IsNullOrEmpty(selectedKeyword)) return;
                 string targetList = (sender as Button)?.Tag as string;

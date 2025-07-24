@@ -92,54 +92,7 @@ namespace WorkPartner
             return null;
         }
 
-        public static List<(string Title, string UrlKeyword)> GetBrowserTabInfos(string browserProcessName)
-        {
-            var tabs = new List<(string Title, string UrlKeyword)>();
-            var processes = Process.GetProcessesByName(browserProcessName);
 
-            foreach (var process in processes)
-            {
-                List<IntPtr> windowHandles = GetWindowHandlesForProcess(process.Id);
-
-                foreach (var handle in windowHandles)
-                {
-                    try
-                    {
-                        var rootElement = AutomationElement.FromHandle(handle);
-                        if (rootElement == null) continue;
-
-                        var tabContainerCondition = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Tab);
-                        var tabContainer = rootElement.FindFirst(TreeScope.Descendants, tabContainerCondition);
-
-                        if (tabContainer != null)
-                        {
-                            var tabItems = tabContainer.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem));
-
-                            foreach (AutomationElement tabItem in tabItems)
-                            {
-                                string url = GetBrowserTabUrlForTabItem(tabItem);
-
-                                if (!string.IsNullOrWhiteSpace(url))
-                                {
-                                    try
-                                    {
-                                        string tabTitle = tabItem.Current.Name;
-                                        string urlKeyword = new Uri(url).Host.ToLower();
-                                        tabs.Add((tabTitle, urlKeyword));
-                                    }
-                                    catch (UriFormatException)
-                                    {
-                                        // URL 형식이 유효하지 않은 경우
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    catch { }
-                }
-            }
-            return tabs;
-        }
 
         public static string GetBrowserTabUrlForTabItem(AutomationElement tabItem)
         {
