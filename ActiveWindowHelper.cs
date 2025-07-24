@@ -82,7 +82,12 @@ namespace WorkPartner
                         new PropertyCondition(AutomationElement.NameProperty, "주소창 및 검색창")
                     ));
 
-                // 수정: 주소창을 찾지 못하면 바로 null을 반환합니다.
+                if (addressBar == null)
+                {
+                    addressBar = element.FindFirst(TreeScope.Descendants,
+                       new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
+                }
+
                 if (addressBar != null && addressBar.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
                 {
                     return ((ValuePattern)pattern).Current.Value as string;
@@ -92,7 +97,54 @@ namespace WorkPartner
             return null;
         }
 
+        public static List<(string Title, string UrlKeyword)> GetBrowserTabInfos(string browserProcessName)
+        {
+            var tabs = new List<(string Title, string UrlKeyword)>();
+            var processes = Process.GetProcessesByName(browserProcessName);
 
+            foreach (var process in processes)
+            {
+                List<IntPtr> windowHandles = GetWindowHandlesForProcess(process.Id);
+
+                foreach (var handle in windowHandles)
+                {
+                    try
+                    {
+                        var rootElement = AutomationElement.FromHandle(handle);
+                        if (rootElement == null) continue;
+
+                        var tabContainerCondition = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Tab);
+                        var tabContainer = rootElement.FindFirst(TreeScope.Descendants, tabContainerCondition);
+
+                        if (tabContainer != null)
+                        {
+                            var tabItems = tabContainer.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem));
+
+                            foreach (AutomationElement tabItem in tabItems)
+                            {
+                                string url = GetBrowserTabUrlForTabItem(tabItem);
+
+                                if (!string.IsNullOrWhiteSpace(url))
+                                {
+                                    try
+                                    {
+                                        string tabTitle = tabItem.Current.Name;
+                                        string urlKeyword = new Uri(url).Host.ToLower();
+                                        tabs.Add((tabTitle, urlKeyword));
+                                    }
+                                    catch (UriFormatException)
+                                    {
+                                        // URL 형식이 유효하지 않은 경우
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            }
+            return tabs;
+        }
 
         public static string GetBrowserTabUrlForTabItem(AutomationElement tabItem)
         {
@@ -111,32 +163,15 @@ namespace WorkPartner
                         new PropertyCondition(AutomationElement.NameProperty, "주소창 및 검색창")
                     ));
 
-                // 주소창을 명확히 찾지 못했을 경우, 유효한 URL을 포함하는 텍스트 필드를 찾습니다.
                 if (addressBar == null)
                 {
-                    var potentialAddressBars = rootElement.FindAll(TreeScope.Descendants,
+                    addressBar = rootElement.FindFirst(TreeScope.Descendants,
                         new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
-
-                    foreach (AutomationElement element in potentialAddressBars)
-                    {
-                        if (element.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
-                        {
-                            string value = ((ValuePattern)pattern).Current.Value as string;
-                            // 값의 형식이 유효한 URL인지 확인합니다.
-                            if (!string.IsNullOrWhiteSpace(value) && Uri.IsWellFormedUriString(value, UriKind.Absolute))
-                            {
-                                // 검색창이 아닌 주소창일 가능성이 높으므로 이 값을 사용합니다.
-                                return value;
-                            }
-                        }
-                    }
                 }
-                else // 명확한 주소창을 찾았을 경우, 해당 값을 반환합니다.
+
+                if (addressBar != null && addressBar.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
                 {
-                    if (addressBar.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
-                    {
-                        return ((ValuePattern)pattern).Current.Value as string;
-                    }
+                    return ((ValuePattern)pattern).Current.Value as string;
                 }
             }
             catch { }

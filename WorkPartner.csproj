@@ -233,7 +233,6 @@
     <Compile Include="BreakActivityWindow.xaml.cs">
       <DependentUpon>BreakActivityWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="BrowserTabHelper.cs" />
     <Compile Include="CharacterDisplay.xaml.cs">
       <DependentUpon>CharacterDisplay.xaml</DependentUpon>
     </Compile>
