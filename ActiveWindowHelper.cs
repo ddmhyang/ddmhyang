@@ -82,12 +82,7 @@ namespace WorkPartner
                         new PropertyCondition(AutomationElement.NameProperty, "주소창 및 검색창")
                     ));
 
-                if (addressBar == null)
-                {
-                    addressBar = element.FindFirst(TreeScope.Descendants,
-                       new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
-                }
-
+                // 수정: 주소창을 찾지 못하면 바로 null을 반환합니다.
                 if (addressBar != null && addressBar.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
                 {
                     return ((ValuePattern)pattern).Current.Value as string;
@@ -163,15 +158,32 @@ namespace WorkPartner
                         new PropertyCondition(AutomationElement.NameProperty, "주소창 및 검색창")
                     ));
 
+                // 주소창을 명확히 찾지 못했을 경우, 유효한 URL을 포함하는 텍스트 필드를 찾습니다.
                 if (addressBar == null)
                 {
-                    addressBar = rootElement.FindFirst(TreeScope.Descendants,
+                    var potentialAddressBars = rootElement.FindAll(TreeScope.Descendants,
                         new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
-                }
 
-                if (addressBar != null && addressBar.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
+                    foreach (AutomationElement element in potentialAddressBars)
+                    {
+                        if (element.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
+                        {
+                            string value = ((ValuePattern)pattern).Current.Value as string;
+                            // 값의 형식이 유효한 URL인지 확인합니다.
+                            if (!string.IsNullOrWhiteSpace(value) && Uri.IsWellFormedUriString(value, UriKind.Absolute))
+                            {
+                                // 검색창이 아닌 주소창일 가능성이 높으므로 이 값을 사용합니다.
+                                return value;
+                            }
+                        }
+                    }
+                }
+                else // 명확한 주소창을 찾았을 경우, 해당 값을 반환합니다.
                 {
-                    return ((ValuePattern)pattern).Current.Value as string;
+                    if (addressBar.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
+                    {
+                        return ((ValuePattern)pattern).Current.Value as string;
+                    }
                 }
             }
             catch { }
