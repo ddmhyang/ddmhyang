@@ -1,4 +1,5 @@
-﻿// ActiveWindowHelper.cs (수정안)
+﻿// 파일: ActiveWindowHelper.cs (수정 후)
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,6 +13,8 @@ namespace WorkPartner
     public static class ActiveWindowHelper
     {
         #region Windows API Imports
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
         [DllImport("user32.dll")]
         private static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll", SetLastError = true)]
@@ -26,8 +29,6 @@ namespace WorkPartner
         private static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
         [DllImport("kernel32.dll")]
         private static extern uint GetTickCount();
-
-        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
@@ -43,7 +44,6 @@ namespace WorkPartner
                 IntPtr handle = GetForegroundWindow();
                 GetWindowThreadProcessId(handle, out uint processId);
                 Process process = Process.GetProcessById((int)processId);
-                if (process.ProcessName.ToLower() == "idle") return "unknown";
                 return process.ProcessName.ToLower();
             }
             catch { return "unknown"; }
@@ -62,6 +62,33 @@ namespace WorkPartner
             catch { return "unknown"; }
         }
 
+        // [신규 추가] 카카오톡 등 창이 숨겨진 앱도 찾기 위한 메서드
+        public static List<Process> GetVisibleWindowProcesses()
+        {
+            var processes = new List<Process>();
+            var processIds = new HashSet<uint>();
+
+            EnumWindows(delegate (IntPtr hWnd, IntPtr lParam)
+            {
+                if (IsWindowVisible(hWnd) && GetWindowTextLength(hWnd) > 0)
+                {
+                    GetWindowThreadProcessId(hWnd, out uint processId);
+                    if (processId != 0 && !processIds.Contains(processId))
+                    {
+                        try
+                        {
+                            Process p = Process.GetProcessById((int)processId);
+                            processes.Add(p);
+                            processIds.Add(processId);
+                        }
+                        catch { /* 프로세스가 이미 종료된 경우 등 예외 무시 */ }
+                    }
+                }
+                return true;
+            }, IntPtr.Zero);
+            return processes;
+        }
+
         public static string GetActiveBrowserTabUrl()
         {
             try
@@ -71,22 +98,14 @@ namespace WorkPartner
                 GetWindowThreadProcessId(handle, out uint processId);
                 var process = Process.GetProcessById((int)processId);
 
-                if (process.ProcessName.ToLower() != "chrome" && process.ProcessName.ToLower() != "msedge" && process.ProcessName.ToLower() != "whale") return null;
+                string processName = process.ProcessName.ToLower();
+                if (processName != "chrome" && processName != "msedge" && processName != "whale") return null;
 
                 var element = AutomationElement.FromHandle(handle);
                 if (element == null) return null;
 
-                var addressBar = element.FindFirst(TreeScope.Subtree,
-                    new AndCondition(
-                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
-                        new PropertyCondition(AutomationElement.NameProperty, "주소창 및 검색창")
-                    ));
-
-                if (addressBar == null)
-                {
-                    addressBar = element.FindFirst(TreeScope.Descendants,
-                       new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
-                }
+                var addressBar = element.FindFirst(TreeScope.Descendants,
+                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
 
                 if (addressBar != null && addressBar.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
                 {
@@ -95,115 +114,6 @@ namespace WorkPartner
             }
             catch { }
             return null;
-        }
-
-        //public static List<(string Title, string UrlKeyword)> GetBrowserTabInfos(string browserProcessName)
-        //{
-        //    var tabs = new List<(string Title, string UrlKeyword)>();
-        //    var processes = Process.GetProcessesByName(browserProcessName);
-
-        //    foreach (var process in processes)
-        //    {
-        //        List<IntPtr> windowHandles = GetWindowHandlesForProcess(process.Id);
-
-        //        foreach (var handle in windowHandles)
-        //        {
-        //            try
-        //            {
-        //                var rootElement = AutomationElement.FromHandle(handle);
-        //                if (rootElement == null) continue;
-
-        //                var tabContainerCondition = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Tab);
-        //                var tabContainer = rootElement.FindFirst(TreeScope.Descendants, tabContainerCondition);
-
-        //                if (tabContainer != null)
-        //                {
-        //                    var tabItems = tabContainer.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem));
-
-        //                    foreach (AutomationElement tabItem in tabItems)
-        //                    {
-        //                        string url = GetBrowserTabUrlForTabItem(tabItem);
-
-        //                        if (!string.IsNullOrWhiteSpace(url))
-        //                        {
-        //                            try
-        //                            {
-        //                                string tabTitle = tabItem.Current.Name;
-        //                                string urlKeyword = new Uri(url).Host.ToLower();
-        //                                tabs.Add((tabTitle, urlKeyword));
-        //                            }
-        //                            catch (UriFormatException)
-        //                            {
-        //                                // URL 형식이 유효하지 않은 경우
-        //                            }
-        //                        }
-        //                    }
-        //                }
-        //            }
-        //            catch { }
-        //        }
-        //    }
-        //    return tabs;
-        //}
-
-        public static string GetBrowserTabUrlForTabItem(AutomationElement tabItem)
-        {
-            try
-            {
-                AutomationElement rootElement = tabItem;
-                while (rootElement.Current.ControlType != ControlType.Window)
-                {
-                    rootElement = TreeWalker.ControlViewWalker.GetParent(rootElement);
-                    if (rootElement == null) return null;
-                }
-
-                var addressBar = rootElement.FindFirst(TreeScope.Descendants,
-                    new AndCondition(
-                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
-                        new PropertyCondition(AutomationElement.NameProperty, "주소창 및 검색창")
-                    ));
-
-                if (addressBar == null)
-                {
-                    addressBar = rootElement.FindFirst(TreeScope.Descendants,
-                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
-                }
-
-                if (addressBar != null && addressBar.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
-                {
-                    return ((ValuePattern)pattern).Current.Value as string;
-                }
-            }
-            catch { }
-
-            return null;
-        }
-
-        private static List<IntPtr> GetWindowHandlesForProcess(int processId)
-        {
-            var windowHandles = new List<IntPtr>();
-            GCHandle gcHandles = GCHandle.Alloc(windowHandles);
-            try
-            {
-                EnumWindows(new EnumWindowsProc((hWnd, lParam) =>
-                {
-                    GetWindowThreadProcessId(hWnd, out uint windowProcessId);
-                    if (windowProcessId == processId && IsWindowVisible(hWnd) && GetWindowTextLength(hWnd) > 0)
-                    {
-                        var list = GCHandle.FromIntPtr(lParam).Target as List<IntPtr>;
-                        list.Add(hWnd);
-                    }
-                    return true;
-                }), GCHandle.ToIntPtr(gcHandles));
-            }
-            finally
-            {
-                if (gcHandles.IsAllocated)
-                {
-                    gcHandles.Free();
-                }
-            }
-            return windowHandles;
         }
 
         public static TimeSpan GetIdleTime()
