@@ -5,13 +5,13 @@
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="False"
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
-    <Border Background="#88000000" CornerRadius="10">
+    <Border x:Name="TimerBorder" Background="#88000000" CornerRadius="10">
         <TextBlock x:Name="TimeTextBlock"
-                   Text="00:00:00"
-                   Foreground="White"
-                   FontSize="24"
-                   FontWeight="Bold"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"/>
+               Text="00:00:00"
+               Foreground="White"
+               FontSize="24"
+               FontWeight="Bold"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"/>
     </Border>
 </Window>
