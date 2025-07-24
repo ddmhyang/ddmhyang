@@ -92,7 +92,7 @@ namespace WorkPartner
         {
             if (listBox == WorkProcessSuggestionListBox) return (WorkProcessPopup, WorkProcessSuggestionListBox);
             if (listBox == PassiveProcessSuggestionListBox) return (PassiveProcessPopup, PassiveProcessSuggestionListBox);
-            if (listBox == DistractionProcessSuggestionListBox) return (DistractionProcessPopup, DistractionProcessSuggestionListBox);
+            if (listBox == DistractionProcessSuggestionListBox) return (null, null);
             return (null, null);
         }
         #endregion
@@ -166,10 +166,10 @@ namespace WorkPartner
                     string processName = process.ProcessName.ToLower();
                     if (processName == "chrome" || processName == "msedge" || processName == "whale")
                     {
-                        var browserTabs = ActiveWindowHelper.GetRunningBrowserInfos(); // 수정된 메서드 호출
+                        var browserTabs = ActiveWindowHelper.GetRunningBrowserInfos();
                         foreach (var tab in browserTabs)
                         {
-                            runningApps.Add(new InstalledProgram { Id = tab.UrlKeyword, DisplayName = tab.Title, ProcessName = processName, Icon = GetProcessIcon(process) });
+                            runningApps.Add(new InstalledProgram { Id = tab.UrlKeyword, DisplayName = tab.Title, ProcessName = processName, Icon = null });
                         }
                     }
                     else

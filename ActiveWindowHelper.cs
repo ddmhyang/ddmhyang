@@ -103,95 +103,73 @@ namespace WorkPartner
         public static List<(string Title, string UrlKeyword)> GetRunningBrowserInfos()
         {
             var tabs = new List<(string Title, string UrlKeyword)>();
+            var browserProcesses = new[] { "chrome", "msedge", "whale" };
+
+            foreach (var processName in browserProcesses)
+            {
+                var processes = Process.GetProcessesByName(processName);
+                foreach (var process in processes)
+                {
+                    List<IntPtr> windowHandles = GetWindowHandlesForProcess(process.Id);
+                    foreach (var handle in windowHandles)
+                    {
+                        try
+                        {
+                            var element = AutomationElement.FromHandle(handle);
+                            if (element == null) continue;
+
+                            // 창의 제목 가져오기
+                            string windowTitle = element.Current.Name;
+
+                            // 주소창에서 URL 가져오기
+                            string url = GetUrlFromAutomationElement(element);
+
+                            if (!string.IsNullOrWhiteSpace(url))
+                            {
+                                try
+                                {
+                                    string urlKeyword = new Uri(url).Host.ToLower();
+                                    tabs.Add((windowTitle, urlKeyword));
+                                }
+                                catch (UriFormatException)
+                                {
+                                    // 유효하지 않은 URL 형식
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+                }
+            }
+
+            // 중복 제거 후 반환
+            return tabs.GroupBy(t => t.UrlKeyword).Select(g => g.First()).ToList();
+        }
+
+        private static string GetUrlFromAutomationElement(AutomationElement element)
+        {
             try
             {
-                IntPtr handle = GetForegroundWindow();
-                if (handle == IntPtr.Zero) return tabs;
+                var addressBar = element.FindFirst(TreeScope.Subtree,
+                    new AndCondition(
+                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
+                        new PropertyCondition(AutomationElement.NameProperty, "주소창 및 검색창")
+                    ));
 
-                string windowTitle = GetActiveWindowTitle();
-                string url = GetActiveBrowserTabUrl();
-
-                if (!string.IsNullOrWhiteSpace(url))
+                if (addressBar == null)
                 {
-                    string urlKeyword = new Uri(url).Host.ToLower();
-                    tabs.Add((windowTitle, urlKeyword));
+                    addressBar = element.FindFirst(TreeScope.Descendants,
+                       new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
+                }
+
+                if (addressBar != null && addressBar.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
+                {
+                    return ((ValuePattern)pattern).Current.Value as string;
                 }
             }
             catch { }
-            return tabs;
+            return null;
         }
-
-        //public static List<(string Title, string UrlKeyword)> GetBrowserTabInfos(string browserProcessName)
-        //{
-        //    var tabs = new List<(string Title, string UrlKeyword)>();
-        //    var processes = Process.GetProcessesByName(browserProcessName);
-
-        //    foreach (var process in processes)
-        //    {
-        //        List<IntPtr> windowHandles = GetWindowHandlesForProcess(process.Id);
-
-        //        foreach (var handle in windowHandles)
-        //        {
-        //            try
-        //            {
-        //                var rootElement = AutomationElement.FromHandle(handle);
-        //                if (rootElement == null) continue;
-
-        //                var tabContainerCondition = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Tab);
-        //                var tabContainer = rootElement.FindFirst(TreeScope.Descendants, tabContainerCondition);
-
-        //                if (tabContainer != null)
-        //                {
-        //                    var tabItems = tabContainer.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem));
-
-        //                    foreach (AutomationElement tabItem in tabItems)
-        //                    {
-        //                        // 탭의 제목을 직접 가져옴
-        //                        string tabTitle = tabItem.Current.Name;
-        //                        if (string.IsNullOrWhiteSpace(tabTitle)) continue;
-
-        //                        // 탭의 URL을 가져오는 더 견고한 로직
-        //                        string url = GetUrlFromTabElement(tabItem);
-
-        //                        if (!string.IsNullOrWhiteSpace(url))
-        //                        {
-        //                            try
-        //                            {
-        //                                string urlKeyword = new Uri(url).Host.ToLower();
-        //                                tabs.Add((tabTitle, urlKeyword));
-        //                            }
-        //                            catch (UriFormatException)
-        //                            {
-        //                                // URL 형식이 유효하지 않은 경우
-        //                            }
-        //                        }
-        //                    }
-        //                }
-        //            }
-        //            catch { }
-        //        }
-        //    }
-        //    return tabs;
-        //}
-
-        //public static string GetUrlFromTabElement(AutomationElement tabItem)
-        //{
-        //    try
-        //    {
-        //        // TabItem에서 Pattern을 찾아 URL을 가져오는 로직 (예: InvokePattern)
-        //        if (tabItem.TryGetCurrentPattern(SelectionItemPattern.Pattern, out object selectionPattern))
-        //        {
-        //            SelectionItemPattern selectedItem = (SelectionItemPattern)selectionPattern;
-        //            selectedItem.Select(); // 탭을 선택하여 주소창 내용이 변경되도록 함
-
-        //            // 현재 활성화된 탭의 URL을 가져오는 로직 재사용
-        //            return GetActiveBrowserTabUrl();
-        //        }
-        //    }
-        //    catch { }
-
-        //    return null;
-        //}
 
         private static List<IntPtr> GetWindowHandlesForProcess(int processId)
         {
