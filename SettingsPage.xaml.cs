@@ -121,7 +121,7 @@ namespace WorkPartner
             if (File.Exists(executablePath)) return executablePath;
             return null;
         }
-
+        
         private BitmapSource GetIcon(string filePath)
         {
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return null;
