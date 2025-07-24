@@ -29,14 +29,14 @@ namespace WorkPartner
             LoadSettings();
             UpdateUIFromSettings();
 
-            // 1. 로딩 시작 시 프로그레스 바를 보이게 함
+            // 로딩 시작 시 프로그레스 바를 보이게 함
             LoadingProgressBar.Visibility = Visibility.Visible;
 
             BackgroundWorker worker = new BackgroundWorker();
             worker.DoWork += (s, e) => { _allPrograms = GetAllPrograms(); };
             worker.RunWorkerCompleted += (s, e) =>
             {
-                // 2. 작업 완료 시 프로그레스 바를 숨김
+                // 작업 완료 시 프로그레스 바를 숨김
                 LoadingProgressBar.Visibility = Visibility.Collapsed;
             };
             worker.RunWorkerAsync();
