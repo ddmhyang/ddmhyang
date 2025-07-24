@@ -219,7 +219,6 @@ namespace WorkPartner
             _miniTimer = timer;
         }
 
-        // ✂️ 이 코드로 기존 Timer_Tick 메서드를 교체하세요 ✂️
         private void Timer_Tick(object sender, EventArgs e)
         {
             if (_stopwatch.IsRunning && _lastUnratedSession != null)
@@ -306,24 +305,46 @@ namespace WorkPartner
 
         private void UpdateCoinDisplay() { if (_settings != null) { CoinDisplayTextBlock.Text = _settings.Coins.ToString("N0"); } }
 
-        // DashboardPage.xaml.cs
-
+        // ✂️✂️✂️ 이 메서드를 아래의 새 코드로 교체해주세요 ✂️✂️✂️
         private void HandleStopwatchMode()
         {
             string activeProcess = ActiveWindowHelper.GetActiveProcessName();
-            string activeUrl = ActiveWindowHelper.GetActiveBrowserTabUrl(); // <-- URL을 직접 가져옵니다.
-            string activeTitle = string.IsNullOrEmpty(activeUrl) ? ActiveWindowHelper.GetActiveWindowTitle().ToLower() : activeUrl;
+
+            // 디버깅 중 Visual Studio가 활성창으로 잡히는 현상을 방지
+            if (activeProcess == "devenv")
+            {
+                ActiveProcessDisplay.Text = "활성: [디버깅 세션]";
+                // 타이머는 계속 돌게 두되, 현재 틱에서는 아무 작업도 하지 않고 넘어갑니다.
+                // 이렇게 하면 다른 프로그램으로 전환했을 때 바로 감지할 수 있습니다.
+                return;
+            }
+
+            string activeUrl = ActiveWindowHelper.GetActiveBrowserTabUrl();
+            string activeTitle;    // UI 표시용 텍스트
+            string keywordToCheck; // 추적 로직용 키워드
+
+            if (!string.IsNullOrEmpty(activeUrl))
+            {
+                // URL을 성공적으로 가져온 경우
+                activeTitle = activeUrl;
+                keywordToCheck = activeUrl; // 추적 키워드는 URL 전체
+            }
+            else
+            {
+                // URL을 가져오지 못한 경우 (일반 프로그램)
+                activeTitle = ActiveWindowHelper.GetActiveWindowTitle().ToLower();
+                keywordToCheck = activeProcess; // 추적 키워드는 프로세스 이름
+            }
 
             ActiveProcessDisplay.Text = $"활성: {activeTitle}";
 
-            // 검사할 키워드 (URL이 있으면 URL, 없으면 프로세스 이름)
-            string keywordToCheck = !string.IsNullOrEmpty(activeUrl) ? activeUrl : activeProcess;
 
             // 방해 요소 검사
             if (_settings.DistractionProcesses.Any(p => keywordToCheck.Contains(p)))
             {
                 if (_stopwatch.IsRunning) { LogWorkSession(); _stopwatch.Reset(); }
                 CurrentTaskDisplay.Text = "[딴짓 중!]";
+                UpdateLiveTimeDisplays(); // 딴짓 중일때도 시간 표시는 업데이트
                 return;
             }
 
@@ -331,7 +352,6 @@ namespace WorkPartner
             bool isTrackable = _settings.WorkProcesses.Any(p => keywordToCheck.Contains(p));
             bool isPassive = _settings.PassiveProcesses.Any(p => keywordToCheck.Contains(p));
 
-            // ... (이하 로직은 기존과 동일) ...
             if (isTrackable || isPassive)
             {
                 bool isIdle = ActiveWindowHelper.GetIdleTime().TotalSeconds > _settings.IdleTimeoutSeconds;
@@ -357,7 +377,6 @@ namespace WorkPartner
             }
             UpdateLiveTimeDisplays();
         }
-        // DashboardPage.xaml.cs
 
         private void UpdateLiveTimeDisplays()
         {
@@ -367,7 +386,6 @@ namespace WorkPartner
                 string timeString = realTimeTotal.ToString(@"hh\:mm\:ss");
                 MainTimeDisplay.Text = timeString;
 
-                // ▼▼▼ 이 코드를 추가하세요 ▼▼▼
                 _miniTimer?.SetRunningStyle(); // 실행 중 스타일 적용
                 _miniTimer?.UpdateTime(timeString);
 
@@ -382,7 +400,6 @@ namespace WorkPartner
                 string timeString = _totalTimeTodayFromLogs.ToString(@"hh\:mm\:ss");
                 MainTimeDisplay.Text = timeString;
 
-                // ▼▼▼ 이 코드를 추가하세요 ▼▼▼
                 _miniTimer?.SetStoppedStyle(); // 멈춤 스타일 적용
                 _miniTimer?.UpdateTime(timeString);
             }
