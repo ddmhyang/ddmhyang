@@ -76,6 +76,7 @@ namespace WorkPartner
             _predictionService = new PredictionService();
             _bgmPlayer = new MediaPlayer();
             _lastSuggestionTime = DateTime.MinValue;
+            DataManager.SettingsUpdated += OnSettingsUpdated;
         }
 
         private void InitializeData()
@@ -97,17 +98,29 @@ namespace WorkPartner
             return _taskColors[taskName];
         }
 
-        private void OnSettingsUpdated()
-        {
-            // AppSettings.Load()는 인스턴스 메서드이므로, 새로운 인스턴스를 로드하여 갱신합니다.
-            _settings = AppSettings.Load();
-            DataContext = _settings;
-        }
-
         #region 데이터 저장 / 불러오기
         private void InitializeTimer() { _stopwatch = new Stopwatch(); _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) }; _timer.Tick += Timer_Tick; _timer.Start(); }
-        public void LoadAllData() { LoadSettings(); LoadTasks(); LoadTodos(); LoadTimeLogs(); UpdateCoinDisplay(); }
-        public void LoadSettings() { if (!File.Exists(_settingsFilePath)) { _settings = new AppSettings(); return; } var json = File.ReadAllText(_settingsFilePath); _settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings(); }
+
+        public void LoadAllData()
+        {
+            LoadSettings(); // 수정된 LoadSettings() 호출
+            LoadTasks();
+            LoadTodos();
+            LoadTimeLogs();
+            UpdateCoinDisplay();
+        }
+
+        public void LoadSettings()
+        {
+            // DataManager의 정적 메서드 사용
+            _settings = DataManager.LoadSettings();
+        }
+
+        private void OnSettingsUpdated()
+        {
+            _settings = DataManager.LoadSettings(); // DataManager의 정적 메서드 사용
+        }
+
         private void SaveSettings() { var options = new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }; var json = JsonSerializer.Serialize(_settings, options); File.WriteAllText(_settingsFilePath, json); }
         private void LoadTasks() { if (!File.Exists(_tasksFilePath)) return; var json = File.ReadAllText(_tasksFilePath); TaskItems = JsonSerializer.Deserialize<ObservableCollection<TaskItem>>(json) ?? new ObservableCollection<TaskItem>(); TaskListBox.ItemsSource = TaskItems; }
         private void SaveTasks() { var options = new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }; var json = JsonSerializer.Serialize(TaskItems, options); File.WriteAllText(_tasksFilePath, json); }

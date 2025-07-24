@@ -26,7 +26,7 @@ namespace WorkPartner
         public SettingsPage()
         {
             InitializeComponent();
-            LoadSettings();
+            Settings = DataManager.LoadSettings(); // DataManager의 정적 메서드 사용
             UpdateUIFromSettings();
 
             BackgroundWorker worker = new BackgroundWorker();
@@ -35,28 +35,18 @@ namespace WorkPartner
         }
 
         #region 데이터 로드 및 저장
+        // LoadSettings와 SaveSettings 메서드를 제거하거나 DataManager의 정적 메서드를 호출하도록 수정
         private void LoadSettings()
         {
-            if (File.Exists(_settingsFilePath))
-            {
-                var json = File.ReadAllText(_settingsFilePath);
-                Settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
-            }
-            else
-            {
-                Settings = new AppSettings();
-            }
+            // DataManager.LoadSettings()를 호출하도록 변경
+            Settings = DataManager.LoadSettings();
         }
 
+        // SaveSettings 메서드를 제거하거나 DataManager.SaveSettings()를 호출하도록 변경
         private void SaveSettings()
         {
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-            };
-            var json = JsonSerializer.Serialize(Settings, options);
-            File.WriteAllText(_settingsFilePath, json);
+            // DataManager.SaveSettings()를 호출하도록 변경
+            DataManager.SaveSettings(Settings);
         }
 
         private void UpdateUIFromSettings()
@@ -281,10 +271,10 @@ namespace WorkPartner
             {
                 Settings.WorkProcesses.Add(newProcess);
                 WorkProcessInputTextBox.Clear();
-                SaveSettings();
+                // DataManager의 정적 메서드 호출
+                DataManager.SaveSettingsAndNotify(Settings);
                 WorkProcessListBox.ItemsSource = null;
                 WorkProcessListBox.ItemsSource = Settings.WorkProcesses;
-                DataManager.SaveSettingsAndNotify(_settings);
             }
         }
 
@@ -359,7 +349,7 @@ namespace WorkPartner
                 Settings.IsMiniTimerEnabled = MiniTimerCheckBox.IsChecked ?? false;
                 (Application.Current.MainWindow as MainWindow)?.ToggleMiniTimer();
             }
-            SaveSettings();
+            DataManager.SaveSettingsAndNotify(Settings); // DataManager의 정적 메서드 호출
         }
 
         private void Setting_Changed_IdleTimeout(object sender, TextChangedEventArgs e)

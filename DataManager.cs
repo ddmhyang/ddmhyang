@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Text.Json;
 using System.Windows; // MessageBox를 위해 추가
 
 namespace WorkPartner
@@ -18,34 +19,42 @@ namespace WorkPartner
         public static string TodosFilePath { get; }
         public static string MemosFilePath { get; }
         public static string ModelFilePath { get; }
-
-        // 3. 읽기 전용 데이터 파일의 경로도 관리합니다.
         public static string ItemsDbFilePath { get; }
 
         // 프로그램이 시작될 때 단 한 번만 실행되는 생성자
         static DataManager()
         {
-            // AppData 폴더 경로 설정 (예: C:\Users\사용자\AppData\Roaming\WorkPartner)
             AppDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WorkPartner");
-
-            // 우리 앱 폴더가 없으면 새로 생성
             Directory.CreateDirectory(AppDataFolder);
-
-            // 각 파일의 전체 경로 설정
             SettingsFilePath = Path.Combine(AppDataFolder, "app_settings.json");
             TimeLogFilePath = Path.Combine(AppDataFolder, "timelogs.json");
             TasksFilePath = Path.Combine(AppDataFolder, "tasks.json");
             TodosFilePath = Path.Combine(AppDataFolder, "todos.json");
             MemosFilePath = Path.Combine(AppDataFolder, "memos.json");
             ModelFilePath = Path.Combine(AppDataFolder, "FocusPredictionModel.zip");
-
-            // 읽기 전용 파일은 설치 폴더 경로를 사용
             ItemsDbFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "items_db.json");
+        }
+
+        public static AppSettings LoadSettings()
+        {
+            if (File.Exists(SettingsFilePath))
+            {
+                var json = File.ReadAllText(SettingsFilePath);
+                return JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+            }
+            return new AppSettings();
+        }
+
+        public static void SaveSettings(AppSettings settings)
+        {
+            var options = new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+            var json = JsonSerializer.Serialize(settings, options);
+            File.WriteAllText(SettingsFilePath, json);
         }
 
         public static void SaveSettingsAndNotify(AppSettings settings)
         {
-            settings.Save();
+            SaveSettings(settings);
             SettingsUpdated?.Invoke();
         }
 
