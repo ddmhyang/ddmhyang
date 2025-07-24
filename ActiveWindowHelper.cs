@@ -6,6 +6,10 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Automation;
+using System.Diagnostics; // Process 클래스를 사용하기 위해 추가
+using Newtonsoft.Json;  // JSON 처리를 위해 추가 (WorkPartner 프로젝트에도 Newtonsoft.Json 설치 필요)
+using Newtonsoft.Json.Linq; // JObject를 사용하기 위해 추가
+
 
 namespace WorkPartner
 {
@@ -99,51 +103,67 @@ namespace WorkPartner
 
         public static List<(string Title, string UrlKeyword)> GetBrowserTabInfos(string browserProcessName)
         {
-            var tabs = new List<(string Title, string UrlKeyword)>();
-            var processes = Process.GetProcessesByName(browserProcessName);
+            var allTabs = new List<(string Title, string UrlKeyword)>();
+            var addedTitles = new HashSet<string>();
 
-            foreach (var process in processes)
+            // 네이티브 호스트 실행 파일의 경로를 지정합니다.
+            // 이 경로는 실제 빌드된 경로에 맞게 조정해야 할 수 있습니다.
+            string hostPath = @"<YOUR_SOLUTION_PATH>\WorkPartner.NativeHost\bin\Debug\WorkPartner.NativeHost.exe";
+
+            if (!File.Exists(hostPath))
             {
-                List<IntPtr> windowHandles = GetWindowHandlesForProcess(process.Id);
+                // 파일이 없을 경우, 사용자에게 알리거나 로깅할 수 있습니다.
+                // MessageBox.Show("네이티브 호스트를 찾을 수 없습니다.");
+                return allTabs;
+            }
 
-                foreach (var handle in windowHandles)
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
                 {
-                    try
+                    FileName = hostPath,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true // 콘솔 창을 띄우지 않습니다.
+                }
+            };
+
+            process.Start();
+
+            // 네이티브 호스트의 출력을 읽어옵니다.
+            string output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+
+            if (string.IsNullOrWhiteSpace(output))
+            {
+                return allTabs;
+            }
+
+            try
+            {
+                // 네이티브 호스트가 출력한 JSON을 파싱합니다.
+                var jsonResult = JObject.Parse(output);
+                var tabs = jsonResult["tabs"];
+
+                foreach (var tab in tabs)
+                {
+                    string title = tab["Title"]?.ToString() ?? "제목 없음";
+                    string url = tab["Url"]?.ToString() ?? string.Empty;
+
+                    if (!string.IsNullOrEmpty(title) && !addedTitles.Contains(title))
                     {
-                        var rootElement = AutomationElement.FromHandle(handle);
-                        if (rootElement == null) continue;
-
-                        var tabContainerCondition = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Tab);
-                        var tabContainer = rootElement.FindFirst(TreeScope.Descendants, tabContainerCondition);
-
-                        if (tabContainer != null)
-                        {
-                            var tabItems = tabContainer.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem));
-
-                            foreach (AutomationElement tabItem in tabItems)
-                            {
-                                string url = GetBrowserTabUrlForTabItem(tabItem);
-
-                                if (!string.IsNullOrWhiteSpace(url))
-                                {
-                                    try
-                                    {
-                                        string tabTitle = tabItem.Current.Name;
-                                        string urlKeyword = new Uri(url).Host.ToLower();
-                                        tabs.Add((tabTitle, urlKeyword));
-                                    }
-                                    catch (UriFormatException)
-                                    {
-                                        // URL 형식이 유효하지 않은 경우
-                                    }
-                                }
-                            }
-                        }
+                        allTabs.Add((title, url));
+                        addedTitles.Add(title);
                     }
-                    catch { }
                 }
             }
-            return tabs;
+            catch (Exception ex)
+            {
+                // JSON 파싱 중 오류 처리
+                // MessageBox.Show("탭 정보를 파싱하는 중 오류 발생: " + ex.Message);
+            }
+
+            return allTabs;
         }
 
         public static string GetBrowserTabUrlForTabItem(AutomationElement tabItem)
