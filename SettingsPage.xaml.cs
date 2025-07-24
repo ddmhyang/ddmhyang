@@ -184,7 +184,9 @@ namespace WorkPartner
         private void AddActiveTabButton_Click(object sender, RoutedEventArgs e)
         {
             _targetProcessList = (sender as Button)?.Tag as string;
-            MessageBox.Show("3초 안에 추가하고 싶은 브라우저 탭을 클릭하여 활성화하세요.", "알림");
+
+            // [수정] 안내 메시지 박스를 제거했습니다.
+            // MessageBox.Show("3초 안에 추가하고 싶은 브라우저 탭을 클릭하여 활성화하세요.", "알림");
 
             var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
             timer.Tick += (s, args) =>
@@ -194,7 +196,7 @@ namespace WorkPartner
 
                 if (string.IsNullOrEmpty(activeUrl))
                 {
-                    MessageBox.Show("활성화된 브라우저 탭을 찾지 못했습니다.", "실패");
+                    // 실패한 경우에도 팝업을 띄우지 않습니다.
                     return;
                 }
 
@@ -205,7 +207,6 @@ namespace WorkPartner
                 }
                 catch
                 {
-                    MessageBox.Show("유효한 웹사이트 주소가 아닙니다.", "오류");
                     return;
                 }
 
@@ -244,11 +245,6 @@ namespace WorkPartner
                 if (added)
                 {
                     DataManager.SaveSettingsAndNotify(Settings);
-                    MessageBox.Show($"'{urlKeyword}'가 목록에 추가되었습니다.", "성공");
-                }
-                else
-                {
-                    MessageBox.Show($"'{urlKeyword}'는(은) 이미 목록에 존재합니다.", "알림");
                 }
             };
             timer.Start();
