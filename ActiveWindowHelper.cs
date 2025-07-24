@@ -71,10 +71,7 @@ namespace WorkPartner
                 GetWindowThreadProcessId(handle, out uint processId);
                 var process = Process.GetProcessById((int)processId);
 
-                // Edge, Chrome, Whale 프로세스만 대상으로 함
-                if (process.ProcessName.ToLower() != "chrome" &&
-                    process.ProcessName.ToLower() != "msedge" &&
-                    process.ProcessName.ToLower() != "whale") return null;
+                if (process.ProcessName.ToLower() != "chrome" && process.ProcessName.ToLower() != "msedge" && process.ProcessName.ToLower() != "whale") return null;
 
                 var element = AutomationElement.FromHandle(handle);
                 if (element == null) return null;
@@ -100,57 +97,67 @@ namespace WorkPartner
             return null;
         }
 
-        public static List<(string Title, string UrlKeyword)> GetRunningBrowserInfos()
+        public static List<(string Title, string UrlKeyword)> GetBrowserTabInfos(string browserProcessName)
         {
             var tabs = new List<(string Title, string UrlKeyword)>();
-            var browserProcesses = new[] { "chrome", "msedge", "whale" };
+            var processes = Process.GetProcessesByName(browserProcessName);
 
-            foreach (var processName in browserProcesses)
+            foreach (var process in processes)
             {
-                var processes = Process.GetProcessesByName(processName);
-                foreach (var process in processes)
+                List<IntPtr> windowHandles = GetWindowHandlesForProcess(process.Id);
+
+                foreach (var handle in windowHandles)
                 {
-                    List<IntPtr> windowHandles = GetWindowHandlesForProcess(process.Id);
-                    foreach (var handle in windowHandles)
+                    try
                     {
-                        try
+                        var rootElement = AutomationElement.FromHandle(handle);
+                        if (rootElement == null) continue;
+
+                        var tabContainerCondition = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Tab);
+                        var tabContainer = rootElement.FindFirst(TreeScope.Descendants, tabContainerCondition);
+
+                        if (tabContainer != null)
                         {
-                            var element = AutomationElement.FromHandle(handle);
-                            if (element == null) continue;
+                            var tabItems = tabContainer.FindAll(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.TabItem));
 
-                            // 창의 제목 가져오기
-                            string windowTitle = element.Current.Name;
-
-                            // 주소창에서 URL 가져오기
-                            string url = GetUrlFromAutomationElement(element);
-
-                            if (!string.IsNullOrWhiteSpace(url))
+                            foreach (AutomationElement tabItem in tabItems)
                             {
-                                try
+                                string url = GetBrowserTabUrlForTabItem(tabItem);
+
+                                if (!string.IsNullOrWhiteSpace(url))
                                 {
-                                    string urlKeyword = new Uri(url).Host.ToLower();
-                                    tabs.Add((windowTitle, urlKeyword));
-                                }
-                                catch (UriFormatException)
-                                {
-                                    // 유효하지 않은 URL 형식
+                                    try
+                                    {
+                                        string tabTitle = tabItem.Current.Name;
+                                        string urlKeyword = new Uri(url).Host.ToLower();
+                                        tabs.Add((tabTitle, urlKeyword));
+                                    }
+                                    catch (UriFormatException)
+                                    {
+                                        // URL 형식이 유효하지 않은 경우
+                                    }
                                 }
                             }
                         }
-                        catch { }
                     }
+                    catch { }
                 }
             }
-
-            // 중복 제거 후 반환
-            return tabs.GroupBy(t => t.UrlKeyword).Select(g => g.First()).ToList();
+            return tabs;
         }
 
-        private static string GetUrlFromAutomationElement(AutomationElement element)
+        public static string GetBrowserTabUrlForTabItem(AutomationElement tabItem)
         {
             try
             {
-                var addressBar = element.FindFirst(TreeScope.Subtree,
+                AutomationElement rootElement = tabItem;
+                while (rootElement.Current.ControlType != ControlType.Window)
+                {
+                    rootElement = TreeWalker.ControlViewWalker.GetParent(rootElement);
+                    if (rootElement == null) return null;
+                }
+
+                var addressBar = rootElement.FindFirst(TreeScope.Descendants,
                     new AndCondition(
                         new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
                         new PropertyCondition(AutomationElement.NameProperty, "주소창 및 검색창")
@@ -158,8 +165,8 @@ namespace WorkPartner
 
                 if (addressBar == null)
                 {
-                    addressBar = element.FindFirst(TreeScope.Descendants,
-                       new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
+                    addressBar = rootElement.FindFirst(TreeScope.Descendants,
+                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit));
                 }
 
                 if (addressBar != null && addressBar.TryGetCurrentPattern(ValuePattern.Pattern, out object pattern))
@@ -168,6 +175,7 @@ namespace WorkPartner
                 }
             }
             catch { }
+
             return null;
         }
 
