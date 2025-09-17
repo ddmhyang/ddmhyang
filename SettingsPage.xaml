@@ -155,6 +155,33 @@
                     </Grid>
                 </Border>
 
+                <TextBlock Text="과목별 색상 설정" Style="{StaticResource HeaderTextStyle}" Margin="0,25,0,10"/>
+                <Border Style="{StaticResource PanelBorderStyle}">
+                    <StackPanel>
+                        <TextBlock Text="작업 종류에 따라 색상을 지정하여 타임 테이블을 꾸며보세요." Margin="0,0,0,10"/>
+
+                        <ListBox x:Name="TaskColorsListBox" Height="150" Margin="0,0,0,10">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="20" Height="20" Margin="0,0,10,0" BorderBrush="Gray" BorderThickness="1">
+                                            <Border.Background>
+                                                <SolidColorBrush Color="{Binding Value}" />
+                                            </Border.Background>
+                                        </Border>
+                                        <TextBlock Text="{Binding Key}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="AddTaskColorButton" Content="추가" Click="AddTaskColorButton_Click" Width="80"/>
+                            <Button x:Name="RemoveTaskColorButton" Content="삭제" Click="RemoveTaskColorButton_Click" Width="80" Margin="5,0,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <!-- 집중 모드 설정 -->
                 <TextBlock Text="집중 모드 설정" Style="{StaticResource HeaderTextStyle}"/>
                 <Border Style="{StaticResource PanelBorderStyle}">

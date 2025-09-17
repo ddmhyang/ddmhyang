@@ -18,6 +18,8 @@ namespace WorkPartner
         public List<Guid> OwnedItemIds { get; set; }
         public Dictionary<ItemType, Guid> EquippedItems { get; set; }
         public Dictionary<ItemType, string> CustomColors { get; set; }
+        public Dictionary<string, string> TaskColors { get; set; } = new Dictionary<string, string>();
+
 
         /// <summary>
         /// [속성 추가] 미니 타이머(항상 위) 기능 활성화 여부

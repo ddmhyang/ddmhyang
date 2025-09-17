@@ -39,7 +39,74 @@ namespace WorkPartner
             worker.DoWork += (s, e) => { _allPrograms = GetAllPrograms(); };
             worker.RunWorkerCompleted += (s, e) => { };
             worker.RunWorkerAsync();
+            LoadTaskColors();
+
         }
+
+        // SettingsPage.xaml.cs 파일의 SettingsPage 클래스 내부에 아래 코드를 추가하세요.
+        // public SettingsPage() 생성자 바로 아래에 추가하면 좋습니다.
+
+        #region 과목별 색상 설정
+
+        private void LoadTaskColors()
+        {
+            // Settings 속성을 사용하여 TaskColors를 가져옵니다.
+            // Dictionary를 ListBox에 바인딩하기 쉽게 KeyValuePair의 리스트로 변환합니다.
+            if (Settings != null && Settings.TaskColors != null)
+            {
+                TaskColorsListBox.ItemsSource = Settings.TaskColors.ToList();
+            }
+        }
+
+        private void AddTaskColorButton_Click(object sender, RoutedEventArgs e)
+        {
+            // TODO: 다음 단계에서 InputWindow를 사용하여 사용자 입력을 받도록 수정합니다.
+            // 현재는 테스트를 위해 고정된 값을 사용합니다.
+            var inputWindow = new InputWindow("새 과목 추가", "과목 이름을 입력하세요:");
+            if (inputWindow.ShowDialog() == true)
+            {
+                string newTask = inputWindow.ResponseText;
+                if (string.IsNullOrWhiteSpace(newTask))
+                {
+                    MessageBox.Show("과목 이름은 비워둘 수 없습니다.", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // 색상은 임시로 랜덤 생성 (나중에 색상 선택 기능 추가 가능)
+                Random r = new Random();
+                string newColor = $"#{r.Next(0x1000000):X6}";
+
+                if (!Settings.TaskColors.ContainsKey(newTask))
+                {
+                    Settings.TaskColors.Add(newTask, newColor);
+                    DataManager.SaveSettings(this.Settings); // 올바른 Settings 속성을 저장
+                    LoadTaskColors(); // 목록 새로고침
+                }
+                else
+                {
+                    MessageBox.Show("이미 동일한 이름의 과목이 존재합니다.", "알림", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+        }
+
+        private void RemoveTaskColorButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (TaskColorsListBox.SelectedItem is KeyValuePair<string, string> selectedItem)
+            {
+                if (MessageBox.Show($"'{selectedItem.Key}' 색상 설정을 삭제하시겠습니까?", "확인", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                {
+                    Settings.TaskColors.Remove(selectedItem.Key);
+                    DataManager.SaveSettings(this.Settings); // 올바른 Settings 속성을 저장
+                    LoadTaskColors(); // 목록 새로고침
+                }
+            }
+            else
+            {
+                MessageBox.Show("삭제할 항목을 선택해주세요.", "알림", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+
+        #endregion
 
         #region 데이터 로드 및 저장
         private void LoadSettings()
@@ -626,7 +693,6 @@ namespace WorkPartner
                 }
             }
         }
-
         #endregion
     }
 }
