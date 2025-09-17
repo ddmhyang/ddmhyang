@@ -16,6 +16,8 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading; // 타이머를 위해 추가
 using Microsoft.Win32;
 using System.Windows.Controls.Primitives; //  <-- 이 줄을 추가하세요!
+using System.Windows.Media;
+
 
 namespace WorkPartner
 {
@@ -573,6 +575,57 @@ namespace WorkPartner
             return null;
         }
 
+
+        #endregion
+
+        // 파일: SettingsPage.xaml.cs
+
+        #region 스크롤 개선 로직 (수정)
+
+        /// <summary>
+        /// 컨트롤의 부모 요소 중에서 특정 타입(T)의 첫 번째 부모를 찾아 반환합니다.
+        /// </summary>
+        private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
+        {
+            DependencyObject parentObject = VisualTreeHelper.GetParent(child);
+            if (parentObject == null) return null;
+            T parent = parentObject as T;
+            if (parent != null)
+            {
+                return parent;
+            }
+            else
+            {
+                return FindVisualParent<T>(parentObject);
+            }
+        }
+
+        /// <summary>
+        /// 자식 컨트롤의 마우스 휠 이벤트를 가로채서 부모 ScrollViewer를 한 줄씩 스크롤하도록 제어합니다.
+        /// </summary>
+        private void HandlePreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (sender is UIElement element && !e.Handled)
+            {
+                // 현재 컨트롤의 부모 중에서 ScrollViewer를 찾습니다.
+                var scrollViewer = FindVisualParent<ScrollViewer>(element);
+                if (scrollViewer != null)
+                {
+                    // 스크롤 방향에 따라 ScrollViewer를 한 줄씩 부드럽게 제어합니다.
+                    if (e.Delta < 0) // 휠을 아래로
+                    {
+                        scrollViewer.LineDown();
+                    }
+                    else // 휠을 위로
+                    {
+                        scrollViewer.LineUp();
+                    }
+
+                    // 이벤트를 여기서 처리했음을 시스템에 알려, 더 이상 이벤트가 전파되지 않도록(중복 스크롤 방지) 합니다.
+                    e.Handled = true;
+                }
+            }
+        }
 
         #endregion
     }
