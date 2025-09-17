@@ -68,13 +68,27 @@
                         <DatePicker x:Name="EndDatePicker" Margin="5,0,5,0"/>
                         <Button Content="조회" Click="CustomDateButton_Click"/>
                     </StackPanel>
-                    <ListView x:Name="TaskAnalysisListView" MaxHeight="200">
-                        <ListView.View>
-                            <GridView>
-                                <GridViewColumn Header="과목명" DisplayMemberBinding="{Binding TaskName}" Width="300"/>
-                                <GridViewColumn Header="총 학습 시간" DisplayMemberBinding="{Binding TotalTimeFormatted}" Width="200"/>
-                            </GridView>
-                        </ListView.View>
+                    <ListView x:Name="TaskAnalysisListView" ItemsSource="{Binding TaskAnalysis}" Margin="10" Grid.Row="1">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="20"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Rectangle Grid.Column="0" Width="10" Height="10" VerticalAlignment="Center">
+                                        <Rectangle.Fill>
+                                            <SolidColorBrush Color="{Binding TaskColor}"/>
+                                        </Rectangle.Fill>
+                                    </Rectangle>
+
+                                    <TextBlock Grid.Column="1" Text="{Binding TaskName}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding TotalTimeFormatted}" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
                     </ListView>
                 </StackPanel>
             </Border>
