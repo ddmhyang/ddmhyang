@@ -2,9 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -16,18 +18,29 @@ using WorkPartner.AI;
 
 namespace WorkPartner
 {
-    public partial class DashboardPage : UserControl
+    public partial class DashboardPage : UserControl, INotifyPropertyChanged
     {
+        #region INotifyPropertyChanged Implementation
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string name = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        }
+        #endregion
+
         #region 변수 선언
         private readonly string _tasksFilePath = DataManager.TasksFilePath;
         private readonly string _todosFilePath = DataManager.TodosFilePath;
         private readonly string _timeLogFilePath = DataManager.TimeLogFilePath;
         private readonly string _settingsFilePath = DataManager.SettingsFilePath;
+
+        // These properties are now used for data binding
         public ObservableCollection<TaskItem> TaskItems { get; set; }
-        public ObservableCollection<TodoItem> TodoItems { get; set; } // 모든 ToDo 항목
-        public ObservableCollection<TodoItem> FilteredTodoItems { get; set; } // 화면에 표시될 ToDo 항목
+        public ObservableCollection<TodoItem> TodoItems { get; set; }
+        public ObservableCollection<TodoItem> FilteredTodoItems { get; set; }
         public ObservableCollection<TimeLogEntry> TimeLogEntries { get; set; }
         public ObservableCollection<string> SuggestedTags { get; set; }
+
         private DispatcherTimer _timer;
         private Stopwatch _stopwatch;
         private TaskItem _currentWorkingTask;
@@ -75,8 +88,11 @@ namespace WorkPartner
 
         public DashboardPage()
         {
-            InitializeComponent();
-            InitializeData();
+            InitializeData(); // 1. 컬렉션 객체들을 먼저 생성합니다.
+            InitializeComponent(); // 2. XAML에 정의된 UI 컨트롤들을 초기화합니다.
+            this.DataContext = this; // 3. DataContext를 설정하여 XAML의 Binding이 작동하도록 합니다.
+
+            // 4. 나머지 로직을 실행합니다.
             LoadAllData();
             InitializeTimer();
 
@@ -89,23 +105,28 @@ namespace WorkPartner
         private void InitializeData()
         {
             TaskItems = new ObservableCollection<TaskItem>();
-            TaskListBox.ItemsSource = TaskItems;
+            // The following line is removed because the ItemsSource is now set via data binding in XAML.
+            // TaskListBox.ItemsSource = TaskItems;
 
             TodoItems = new ObservableCollection<TodoItem>();
             FilteredTodoItems = new ObservableCollection<TodoItem>();
-            TodoTreeView.ItemsSource = FilteredTodoItems;
+            // The following line is removed because the ItemsSource is now set via data binding in XAML.
+            // TodoTreeView.ItemsSource = FilteredTodoItems; // This line was causing the error.
 
             TimeLogEntries = new ObservableCollection<TimeLogEntry>();
             SuggestedTags = new ObservableCollection<string>();
-            SuggestedTagsItemsControl.ItemsSource = SuggestedTags;
+            // The following line is removed because the ItemsSource is now set via data binding in XAML.
+            // SuggestedTagsItemsControl.ItemsSource = SuggestedTags;
         }
+
 
         private SolidColorBrush GetColorForTask(string taskName)
         {
             if (string.IsNullOrEmpty(taskName))
                 return new SolidColorBrush(Colors.LightGray);
 
-            if (_settings.TaskColors != null && _settings.TaskColors.TryGetValue(taskName, out string colorHex))
+            // 설정에서 색상을 먼저 확인합니다.
+            if (_settings != null && _settings.TaskColors != null && _settings.TaskColors.TryGetValue(taskName, out string colorHex))
             {
                 try
                 {
@@ -117,6 +138,7 @@ namespace WorkPartner
                 }
             }
 
+            // 설정에 없으면 동적으로 할당합니다.
             if (!_taskColors.ContainsKey(taskName))
             {
                 _taskColors[taskName] = _colorPalette[_colorIndex % _colorPalette.Count];
@@ -145,21 +167,47 @@ namespace WorkPartner
         private void OnSettingsUpdated()
         {
             _settings = DataManager.LoadSettings();
+            RenderTimeTable(); // 설정이 바뀌면 타임라인 색상을 다시 그립니다.
         }
 
         private void SaveSettings() { DataManager.SaveSettingsAndNotify(_settings); }
-        private void LoadTasks() { if (!File.Exists(_tasksFilePath)) return; var json = File.ReadAllText(_tasksFilePath); TaskItems = JsonSerializer.Deserialize<ObservableCollection<TaskItem>>(json) ?? new ObservableCollection<TaskItem>(); TaskListBox.ItemsSource = TaskItems; }
+
+        private void LoadTasks()
+        {
+            if (!File.Exists(_tasksFilePath)) return;
+            var json = File.ReadAllText(_tasksFilePath);
+            var loadedTasks = JsonSerializer.Deserialize<ObservableCollection<TaskItem>>(json);
+            if (loadedTasks != null)
+            {
+                TaskItems.Clear();
+                foreach (var task in loadedTasks)
+                {
+                    TaskItems.Add(task);
+                }
+            }
+        }
         private void SaveTasks() { var options = new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }; var json = JsonSerializer.Serialize(TaskItems, options); File.WriteAllText(_tasksFilePath, json); }
 
         private void LoadTodos()
         {
             if (!File.Exists(_todosFilePath)) return;
             var json = File.ReadAllText(_todosFilePath);
-            TodoItems = JsonSerializer.Deserialize<ObservableCollection<TodoItem>>(json) ?? new ObservableCollection<TodoItem>();
+            var loadedTodos = JsonSerializer.Deserialize<ObservableCollection<TodoItem>>(json) ?? new ObservableCollection<TodoItem>();
+            TodoItems.Clear();
+            foreach (var todo in loadedTodos)
+            {
+                TodoItems.Add(todo);
+            }
             FilterTodos();
         }
         private void SaveTodos() { var options = new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }; var json = JsonSerializer.Serialize(TodoItems, options); File.WriteAllText(_todosFilePath, json); }
-        private void LoadTimeLogs() { if (!File.Exists(_timeLogFilePath)) return; var json = File.ReadAllText(_timeLogFilePath); TimeLogEntries = JsonSerializer.Deserialize<ObservableCollection<TimeLogEntry>>(json) ?? new ObservableCollection<TimeLogEntry>(); }
+
+        private void LoadTimeLogs()
+        {
+            if (!File.Exists(_timeLogFilePath)) return;
+            var json = File.ReadAllText(_timeLogFilePath);
+            TimeLogEntries = JsonSerializer.Deserialize<ObservableCollection<TimeLogEntry>>(json) ?? new ObservableCollection<TimeLogEntry>();
+        }
         private void SaveTimeLogs() { var options = new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }; var json = JsonSerializer.Serialize(TimeLogEntries, options); File.WriteAllText(_timeLogFilePath, json); }
         #endregion
 
@@ -231,12 +279,13 @@ namespace WorkPartner
                     }
 
                     // 3. Update color settings
-                    if (_settings.TaskColors.ContainsKey(oldName))
+                    if (_settings.TaskColors != null && _settings.TaskColors.ContainsKey(oldName))
                     {
                         var color = _settings.TaskColors[oldName];
                         _settings.TaskColors.Remove(oldName);
                         _settings.TaskColors[newName] = color;
                     }
+
                     if (_taskColors.ContainsKey(oldName))
                     {
                         var colorBrush = _taskColors[oldName];
@@ -244,13 +293,14 @@ namespace WorkPartner
                         _taskColors[newName] = colorBrush;
                     }
 
+
                     // 4. Save everything
                     SaveTasks();
                     SaveTimeLogs();
                     SaveSettings();
 
                     // 5. Refresh UI
-                    TaskListBox.Items.Refresh();
+                    TaskListBox.Items.Refresh(); // This still works with binding
                     RenderTimeTable();
                 }
             }
@@ -288,7 +338,7 @@ namespace WorkPartner
         {
             if (TaskListBox.SelectedItem is TaskItem selectedTask)
             {
-                if (_settings.TaskColors.ContainsKey(selectedTask.Text))
+                if (_settings.TaskColors != null && _settings.TaskColors.ContainsKey(selectedTask.Text))
                 {
                     _settings.TaskColors.Remove(selectedTask.Text);
                     SaveSettings();
@@ -334,9 +384,8 @@ namespace WorkPartner
 
         private bool RemoveTodoItem(ObservableCollection<TodoItem> collection, TodoItem itemToRemove)
         {
-            if (collection.Contains(itemToRemove))
+            if (collection.Remove(itemToRemove))
             {
-                collection.Remove(itemToRemove);
                 return true;
             }
             foreach (var item in collection)
@@ -386,7 +435,7 @@ namespace WorkPartner
 
         private void AddTagMenuItem_Click(object sender, RoutedEventArgs e) { if ((sender as MenuItem)?.DataContext is TodoItem selectedTodo) { var inputWindow = new InputWindow("추가할 태그를 입력하세요:", "#태그") { Owner = Window.GetWindow(this) }; if (inputWindow.ShowDialog() == true) { string newTag = inputWindow.ResponseText; if (!string.IsNullOrWhiteSpace(newTag) && !selectedTodo.Tags.Contains(newTag)) { selectedTodo.Tags.Add(newTag); SaveTodos(); } } } }
         private void SuggestedTag_Click(object sender, RoutedEventArgs e) { if (_lastAddedTodo != null && sender is Button button) { string tagToAdd = button.Content.ToString(); if (!_lastAddedTodo.Tags.Contains(tagToAdd)) { _lastAddedTodo.Tags.Add(tagToAdd); SuggestedTags.Remove(tagToAdd); SaveTodos(); } } }
-        private void AddManualLogButton_Click(object sender, RoutedEventArgs e) { var win = new AddLogWindow(TaskItems) { Owner = Window.GetWindow(this) }; if (win.ShowDialog() == true) { if (win.NewLogEntry != null) TimeLogEntries.Add(win.NewLogEntry); SaveTimeLogs(); RecalculateAllTotals(); RenderTimeTable(); } }
+        private void AddManualLogButton_Click(object sender, RoutedEventArgs e) { var win = new AddLogWindow(TaskItems, null) { Owner = Window.GetWindow(this) }; if (win.ShowDialog() == true) { if (win.NewLogEntry != null) TimeLogEntries.Add(win.NewLogEntry); SaveTimeLogs(); RecalculateAllTotals(); RenderTimeTable(); } }
         private void MemoButton_Click(object sender, RoutedEventArgs e) { if (_memoWindow == null || !_memoWindow.IsVisible) { _memoWindow = new MemoWindow { Owner = Window.GetWindow(this) }; _memoWindow.Show(); } else { _memoWindow.Activate(); } }
         private void TimeLogRect_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) { if ((sender as FrameworkElement)?.Tag is TimeLogEntry log) { var win = new AddLogWindow(TaskItems, log) { Owner = Window.GetWindow(this) }; if (win.ShowDialog() == true) { if (win.IsDeleted) TimeLogEntries.Remove(log); else { log.StartTime = win.NewLogEntry.StartTime; log.EndTime = win.NewLogEntry.EndTime; log.TaskText = win.NewLogEntry.TaskText; log.FocusScore = win.NewLogEntry.FocusScore; } SaveTimeLogs(); RecalculateAllTotals(); RenderTimeTable(); } } }
         private void DeleteSelectedTodo() { if (TodoTreeView.SelectedItem is TodoItem selectedTodo) { var parent = FindParent(null, TodoItems, selectedTodo); if (parent != null) { parent.SubTasks.Remove(selectedTodo); } else { TodoItems.Remove(selectedTodo); } SaveTodos(); FilterTodos(); } else { MessageBox.Show("삭제할 할 일을 목록에서 선택해주세요."); } }
@@ -413,7 +462,7 @@ namespace WorkPartner
             }
         }
 
-        private void TodoNextDayButton_Click(object sender, RoutedEventArgs e)
+        private void NextDayButton_Click(object sender, RoutedEventArgs e)
         {
             if (TodoDatePicker.SelectedDate.HasValue)
             {
@@ -867,26 +916,5 @@ namespace WorkPartner
             MessageBox.Show("타임라인에서 마우스로 영역을 드래그하여 수정할 기록들을 선택하세요.", "일괄 수정 안내");
         }
         #endregion
-
-        private void FocusModeButton_Click(object sender, RoutedEventArgs e)
-        {
-            _isFocusModeActive = !_isFocusModeActive;
-
-            if (_isFocusModeActive)
-            {
-                FocusModeButton.Background = new SolidColorBrush(Color.FromRgb(0, 122, 255));
-                FocusModeButton.Foreground = Brushes.White;
-                var alert = new AlertWindow("집중 모드가 활성화되었습니다.\n방해 앱으로 등록된 프로그램을 실행하면 경고가 표시됩니다.")
-                {
-                    Owner = Application.Current.MainWindow
-                };
-                alert.ShowDialog();
-            }
-            else
-            {
-                FocusModeButton.Background = new SolidColorBrush(Color.FromRgb(0xEF, 0xEF, 0xEF));
-                FocusModeButton.Foreground = new SolidColorBrush(Color.FromRgb(0x33, 0x33, 0x33));
-            }
-        }
     }
 }
