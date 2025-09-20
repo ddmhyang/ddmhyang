@@ -24,6 +24,15 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+        <!-- Card Style Definition -->
+        <Style x:Key="CardBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="0,0,0,15"/>
+        </Style>
     </UserControl.Resources>
     <Grid Margin="10">
         <Grid.ColumnDefinitions>
@@ -56,6 +65,7 @@
             <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}" Margin="0,15,0,0">
                 <Grid>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
@@ -127,7 +137,10 @@
                             <TextBox x:Name="TaskInput" KeyDown="TaskInput_KeyDown"/>
                             <Button Grid.Column="1" Content="추가" Click="AddTaskButton_Click" Margin="10,0,0,0"/>
                         </Grid>
-                        <Button Content="선택한 과목 삭제" Click="DeleteTaskButton_Click" Margin="0,5,0,0" Background="#d9534f" Foreground="White"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                            <Button Content="선택 과목 수정" Click="EditTaskButton_Click" Margin="0,0,5,0" Style="{StaticResource SubtleButton}"/>
+                            <Button Content="선택 과목 삭제" Click="DeleteTaskButton_Click" Background="#d9534f" Foreground="White"/>
+                        </StackPanel>
 
                         <ListBox x:Name="TaskListBox" ItemsSource="{Binding TaskItems}" SelectionChanged="TaskListBox_SelectionChanged" DisplayMemberPath="Text" Margin="0,15,0,0" MaxHeight="150" BorderThickness="0"/>
                     </StackPanel>
@@ -135,7 +148,12 @@
 
                 <Border Style="{StaticResource CardBorderStyle}">
                     <StackPanel>
-                        <TextBlock Text="오늘의 할 일 (To-do List)" Style="{StaticResource HeaderTextStyle}"/>
+                        <TextBlock Text="할 일 목록" Style="{StaticResource HeaderTextStyle}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <Button Content="&lt; 어제" x:Name="TodoPrevDayButton" Click="TodoPrevDayButton_Click" Style="{StaticResource SubtleButton}" Margin="0,0,5,0"/>
+                            <DatePicker x:Name="TodoDatePicker" SelectedDateChanged="TodoDatePicker_SelectedDateChanged"/>
+                            <Button Content="내일 &gt;" x:Name="TodoNextDayButton" Click="TodoNextDayButton_Click" Style="{StaticResource SubtleButton}" Margin="5,0,0,0"/>
+                        </StackPanel>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -145,12 +163,19 @@
                             <Button Grid.Column="1" Content="추가" Click="AddTodoButton_Click" Margin="10,0,0,0"/>
                         </Grid>
                         <Button Content="선택한 할 일 삭제" Click="DeleteTodoButton_Click" Margin="0,5,0,0" Background="#d9534f" Foreground="White"/>
-                        <TreeView x:Name="TodoTreeView" ItemsSource="{Binding TodoItems}" Margin="0,15,0,0" MaxHeight="250" BorderThickness="0">
+                        <TreeView x:Name="TodoTreeView" ItemsSource="{Binding FilteredTodoItems}" Margin="0,15,0,0" MaxHeight="250" BorderThickness="0">
                             <TreeView.ItemTemplate>
                                 <HierarchicalDataTemplate ItemsSource="{Binding SubTasks}">
                                     <StackPanel Orientation="Horizontal">
-                                        <CheckBox IsChecked="{Binding IsCompleted}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                                        <TextBlock Text="{Binding Text}" />
+                                        <CheckBox IsChecked="{Binding IsCompleted}" VerticalAlignment="Center" Margin="0,0,5,0" Checked="SaveTodos_Event" Unchecked="SaveTodos_Event"/>
+                                        <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" BorderThickness="0" KeyDown="TodoTextBox_KeyDown"/>
+                                        <StackPanel.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="하위 항목 추가" Click="AddSubTaskMenuItem_Click"/>
+                                                <MenuItem Header="태그 추가" Click="AddTagMenuItem_Click"/>
+                                                <MenuItem Header="삭제" Click="DeleteTodoMenuItem_Click"/>
+                                            </ContextMenu>
+                                        </StackPanel.ContextMenu>
                                     </StackPanel>
                                 </HierarchicalDataTemplate>
                             </TreeView.ItemTemplate>

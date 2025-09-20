@@ -230,6 +230,9 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="ActiveWindowHelper.cs" />
+    <Compile Include="AlertWindow.xaml.cs">
+      <DependentUpon>AlertWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="AnalysisPage.xaml.cs">
       <DependentUpon>AnalysisPage.xaml</DependentUpon>
     </Compile>
@@ -272,6 +275,10 @@
     <Compile Include="TintColorEffect.cs" />
     <Compile Include="TodoItem.cs" />
     <Page Include="AddLogWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="AlertWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -158,27 +158,21 @@
                 <TextBlock Text="과목별 색상 설정" Style="{StaticResource HeaderTextStyle}" Margin="0,25,0,10"/>
                 <Border Style="{StaticResource PanelBorderStyle}">
                     <StackPanel>
-                        <TextBlock Text="작업 종류에 따라 색상을 지정하여 타임 테이블을 꾸며보세요." Margin="0,0,0,10"/>
-
-                        <ListBox x:Name="TaskColorsListBox" Height="150" Margin="0,0,0,10">
+                        <TextBlock Text="과목을 더블클릭하여 색상을 변경하세요." Margin="0,0,0,10" Foreground="Gray"/>
+                        <ListBox x:Name="TaskColorsListBox" Height="150" Margin="0,0,0,10" MouseDoubleClick="TaskColorsListBox_MouseDoubleClick">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
                                         <Border Width="20" Height="20" Margin="0,0,10,0" BorderBrush="Gray" BorderThickness="1">
                                             <Border.Background>
-                                                <SolidColorBrush Color="{Binding Value}" />
+                                                <SolidColorBrush Color="{Binding ColorBrush.Color}" />
                                             </Border.Background>
                                         </Border>
-                                        <TextBlock Text="{Binding Key}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
-
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button x:Name="AddTaskColorButton" Content="추가" Click="AddTaskColorButton_Click" Width="80"/>
-                            <Button x:Name="RemoveTaskColorButton" Content="삭제" Click="RemoveTaskColorButton_Click" Width="80" Margin="5,0,0,0"/>
-                        </StackPanel>
                     </StackPanel>
                 </Border>
 
@@ -208,7 +202,7 @@
                             <Button Grid.Column="2" Content="규칙 추가" Click="AddTagRuleButton_Click"/>
                         </Grid>
                         <ListView x:Name="TagRulesListView" Margin="0,10,0,0" Height="120"
-          PreviewMouseWheel="HandlePreviewMouseWheel">
+                          PreviewMouseWheel="HandlePreviewMouseWheel">
                             <ListView.View>
                                 <GridView>
                                     <GridViewColumn Header="키워드" DisplayMemberBinding="{Binding Key}" Width="200"/>

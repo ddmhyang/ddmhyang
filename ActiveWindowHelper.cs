@@ -1,4 +1,4 @@
-﻿// ActiveWindowHelper.cs (수정안)
+﻿// ActiveWindowHelper.cs (수정)
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -76,11 +76,30 @@ namespace WorkPartner
                 var element = AutomationElement.FromHandle(handle);
                 if (element == null) return null;
 
-                var addressBar = element.FindFirst(TreeScope.Subtree,
+                // Try to find the address bar. Different browser versions/languages can have different names.
+                var conditions = new OrCondition(
+                    new PropertyCondition(AutomationElement.NameProperty, "주소 및 검색창"), // Korean
+                    new PropertyCondition(AutomationElement.NameProperty, "Address and search bar"), // English
+                    new PropertyCondition(AutomationElement.AutomationIdProperty, "address and search bar") // Fallback for some Edge versions
+                );
+
+                var addressBar = element.FindFirst(TreeScope.Descendants,
                     new AndCondition(
                         new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit),
-                        new PropertyCondition(AutomationElement.NameProperty, "주소창 및 검색창")
+                        conditions
                     ));
+
+                // Fallback for when the name is not found
+                if (addressBar == null)
+                {
+                    var conditionControl = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.ToolBar);
+                    var toolBar = element.FindFirst(TreeScope.Children, conditionControl);
+                    if (toolBar != null)
+                    {
+                        var conditionEdit = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit);
+                        addressBar = toolBar.FindFirst(TreeScope.Children, conditionEdit);
+                    }
+                }
 
                 if (addressBar == null)
                 {
