@@ -179,7 +179,6 @@ namespace WorkPartner
             {
                 LoadSettings();
                 UpdateCoinDisplay();
-                //DashboardCharacterDisplay.UpdateCharacter();
             }
         }
 
@@ -224,16 +223,13 @@ namespace WorkPartner
                         return;
                     }
 
-                    // 1. Update the task item itself
                     selectedTask.Text = newName;
 
-                    // 2. Update all time logs
                     foreach (var log in TimeLogEntries.Where(l => l.TaskText == oldName))
                     {
                         log.TaskText = newName;
                     }
 
-                    // 3. Update color settings
                     if (_settings.TaskColors.ContainsKey(oldName))
                     {
                         var color = _settings.TaskColors[oldName];
@@ -247,12 +243,10 @@ namespace WorkPartner
                         _taskColors[newName] = colorBrush;
                     }
 
-                    // 4. Save everything
                     SaveTasks();
                     SaveTimeLogs();
                     SaveSettings();
 
-                    // 5. Refresh UI
                     TaskListBox.Items.Refresh();
                     RenderTimeTable();
                 }
@@ -291,7 +285,6 @@ namespace WorkPartner
         {
             if (TaskListBox.SelectedItem is TaskItem selectedTask)
             {
-                // Also remove color setting
                 if (_settings.TaskColors.ContainsKey(selectedTask.Text))
                 {
                     _settings.TaskColors.Remove(selectedTask.Text);
@@ -308,15 +301,15 @@ namespace WorkPartner
             var newTodo = new TodoItem
             {
                 Text = TodoInput.Text,
-                Date = TodoDatePicker.SelectedDate?.Date ?? DateTime.Today // Assign selected date
+                Date = TodoDatePicker.SelectedDate?.Date ?? DateTime.Today
             };
 
-            TodoItems.Add(newTodo); // Add to the master list
+            TodoItems.Add(newTodo);
             _lastAddedTodo = newTodo;
             UpdateTagSuggestions(_lastAddedTodo);
             TodoInput.Clear();
             SaveTodos();
-            FilterTodos(); // Re-apply filter to show the new item if it's for the selected day
+            FilterTodos();
         }
 
         private void DeleteTodoButton_Click(object sender, RoutedEventArgs e)
@@ -325,9 +318,9 @@ namespace WorkPartner
             {
                 if (MessageBox.Show($"'{selectedTodo.Text}' 할 일을 삭제하시겠습니까?", "삭제 확인", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                 {
-                    TodoItems.Remove(selectedTodo); // Remove from the master list
+                    TodoItems.Remove(selectedTodo);
                     SaveTodos();
-                    FilterTodos(); // Re-filter the view
+                    FilterTodos();
                 }
             }
             else
@@ -347,7 +340,7 @@ namespace WorkPartner
                 var subTask = new TodoItem
                 {
                     Text = "새 하위 작업",
-                    Date = parentTodo.Date // Inherit date from parent
+                    Date = parentTodo.Date
                 };
                 parentTodo.SubTasks.Add(subTask);
                 SaveTodos();
@@ -357,6 +350,28 @@ namespace WorkPartner
         private void DeleteTodoMenuItem_Click(object sender, RoutedEventArgs e) { DeleteSelectedTodo(); }
 
         private void AddTagMenuItem_Click(object sender, RoutedEventArgs e) { if ((sender as MenuItem)?.DataContext is TodoItem selectedTodo) { var inputWindow = new InputWindow("추가할 태그를 입력하세요:", "#태그") { Owner = Window.GetWindow(this) }; if (inputWindow.ShowDialog() == true) { string newTag = inputWindow.ResponseText; if (!string.IsNullOrWhiteSpace(newTag) && !selectedTodo.Tags.Contains(newTag)) { selectedTodo.Tags.Add(newTag); SaveTodos(); } } } }
+
+        /// <summary>
+        /// [FIX] 'EditTodoDateMenuItem_Click' was missing. This method handles the date change for a TodoItem.
+        /// </summary>
+        private void EditTodoDateMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as MenuItem)?.DataContext is TodoItem selectedTodo)
+            {
+                var dateEditWindow = new DateEditWindow(selectedTodo.Date)
+                {
+                    Owner = Window.GetWindow(this)
+                };
+
+                if (dateEditWindow.ShowDialog() == true)
+                {
+                    selectedTodo.Date = dateEditWindow.SelectedDate;
+                    SaveTodos();
+                    FilterTodos(); // Re-apply the filter as the date has changed.
+                }
+            }
+        }
+
         private void SuggestedTag_Click(object sender, RoutedEventArgs e) { if (_lastAddedTodo != null && sender is Button button) { string tagToAdd = button.Content.ToString(); if (!_lastAddedTodo.Tags.Contains(tagToAdd)) { _lastAddedTodo.Tags.Add(tagToAdd); SuggestedTags.Remove(tagToAdd); SaveTodos(); } } }
         private void AddManualLogButton_Click(object sender, RoutedEventArgs e) { var win = new AddLogWindow(TaskItems) { Owner = Window.GetWindow(this) }; if (win.ShowDialog() == true) { if (win.NewLogEntry != null) TimeLogEntries.Add(win.NewLogEntry); SaveTimeLogs(); RecalculateAllTotals(); RenderTimeTable(); } }
         private void MemoButton_Click(object sender, RoutedEventArgs e) { if (_memoWindow == null || !_memoWindow.IsVisible) { _memoWindow = new MemoWindow { Owner = Window.GetWindow(this) }; _memoWindow.Show(); } else { _memoWindow.Activate(); } }
@@ -420,7 +435,6 @@ namespace WorkPartner
             ActiveProcessDisplay.Text = $"활성: {activeTitle}";
             string keywordToCheck = !string.IsNullOrEmpty(activeUrl) ? activeUrl : activeProcess;
 
-            // 방해 앱 감지
             if (_settings.DistractionProcesses.Any(p => keywordToCheck.Contains(p)))
             {
                 if (_stopwatch.IsRunning || _isPausedForIdle)
@@ -448,31 +462,30 @@ namespace WorkPartner
 
                 if (isCurrentlyIdle)
                 {
-                    if (_stopwatch.IsRunning) // Just became idle
+                    if (_stopwatch.IsRunning)
                     {
                         _stopwatch.Stop();
                         _isPausedForIdle = true;
                         _idleStartTime = DateTime.Now;
                     }
-                    else if (_isPausedForIdle) // Still idle, check grace period
+                    else if (_isPausedForIdle)
                     {
                         if ((DateTime.Now - _idleStartTime).TotalSeconds > IdleGraceSeconds)
                         {
-                            // Grace period over. Log the session that happened before the idle period.
                             LogWorkSession(_sessionStartTime.Add(_stopwatch.Elapsed));
                             _stopwatch.Reset();
-                            _isPausedForIdle = false; // Reset state
+                            _isPausedForIdle = false;
                         }
                     }
                 }
-                else // Not idle, user is active
+                else
                 {
-                    if (_isPausedForIdle) // Just came back
+                    if (_isPausedForIdle)
                     {
-                        _isPausedForIdle = false; // Reset state
-                        _stopwatch.Start(); // Continue the timer
+                        _isPausedForIdle = false;
+                        _stopwatch.Start();
                     }
-                    else if (!_stopwatch.IsRunning) // Starting a new session
+                    else if (!_stopwatch.IsRunning)
                     {
                         if (_currentWorkingTask == null && TaskItems.Any())
                         {
@@ -499,11 +512,10 @@ namespace WorkPartner
                     CurrentTaskDisplay.Text = "선택된 과목 없음";
                 }
             }
-            else // Not a trackable app
+            else
             {
                 if (_stopwatch.IsRunning || _isPausedForIdle)
                 {
-                    // If we were paused for idle and switched to a non-tracked app, log the pre-idle session
                     LogWorkSession(_isPausedForIdle ? _sessionStartTime.Add(_stopwatch.Elapsed) : (DateTime?)null);
                     _stopwatch.Reset();
                 }
@@ -519,7 +531,7 @@ namespace WorkPartner
         {
             if (_currentWorkingTask == null || _stopwatch.Elapsed.TotalSeconds < 1)
             {
-                _stopwatch.Reset(); // Ensure stopwatch is reset even if nothing is logged
+                _stopwatch.Reset();
                 return;
             }
             var entry = new TimeLogEntry
@@ -778,7 +790,6 @@ namespace WorkPartner
             }
         }
 
-        // 'FilterTodos' 메서드 추가
         private void FilterTodos()
         {
             FilteredTodoItems.Clear();
