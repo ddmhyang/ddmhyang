@@ -149,7 +149,7 @@ namespace WorkPartner
             _settings = DataManager.LoadSettings();
         }
 
-        private void SaveSettings() { DataManager.SaveSettingsAndNotify(this.Settings); }
+        private void SaveSettings() { DataManager.SaveSettingsAndNotify(_settings); }
         private void LoadTasks() { if (!File.Exists(_tasksFilePath)) return; var json = File.ReadAllText(_tasksFilePath); TaskItems = JsonSerializer.Deserialize<ObservableCollection<TaskItem>>(json) ?? new ObservableCollection<TaskItem>(); TaskListBox.ItemsSource = TaskItems; }
         private void SaveTasks() { var options = new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping }; var json = JsonSerializer.Serialize(TaskItems, options); File.WriteAllText(_tasksFilePath, json); }
 
@@ -778,5 +778,20 @@ namespace WorkPartner
             }
         }
 
+        // 'FilterTodos' 메서드 추가
+        private void FilterTodos()
+        {
+            FilteredTodoItems.Clear();
+            DateTime? selectedDate = TodoDatePicker.SelectedDate;
+
+            if (selectedDate.HasValue)
+            {
+                var filtered = TodoItems.Where(t => t.Date.Date == selectedDate.Value.Date);
+                foreach (var item in filtered)
+                {
+                    FilteredTodoItems.Add(item);
+                }
+            }
+        }
     }
 }
