@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -10,14 +11,15 @@ using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Microsoft.Win32;
-using System.Windows.Controls.Primitives;
-
+using Color = System.Windows.Media.Color;
+using ColorConverter = System.Windows.Media.ColorConverter;
 
 namespace WorkPartner
 {
@@ -30,17 +32,15 @@ namespace WorkPartner
 
     public partial class SettingsPage : UserControl
     {
-        private readonly string _settingsFilePath = DataManager.SettingsFilePath;
         public AppSettings Settings { get; set; }
         private List<InstalledProgram> _allPrograms;
-        private string _targetProcessList; // 3초 타이머가 어느 목록에 추가할지 기억하기 위한 변수
+        private string _targetProcessList;
 
         public SettingsPage()
         {
             InitializeComponent();
             this.Loaded += SettingsPage_Loaded;
 
-            // 프로그램 목록을 백그라운드에서 불러옵니다.
             BackgroundWorker worker = new BackgroundWorker();
             worker.DoWork += (s, e) => { _allPrograms = GetAllPrograms(); };
             worker.RunWorkerCompleted += (s, e) => { };
@@ -51,7 +51,6 @@ namespace WorkPartner
         {
             LoadSettings();
             UpdateUIFromSettings();
-            LoadTaskColors();
         }
 
         #region 과목별 색상 설정
@@ -60,19 +59,20 @@ namespace WorkPartner
         {
             if (Settings == null) LoadSettings();
 
-            // Load tasks from tasks.json
             List<TaskItem> tasks = new List<TaskItem>();
             if (File.Exists(DataManager.TasksFilePath))
             {
-                var json = File.ReadAllText(DataManager.TasksFilePath);
-                tasks = JsonSerializer.Deserialize<List<TaskItem>>(json) ?? new List<TaskItem>();
+                try
+                {
+                    var json = File.ReadAllText(DataManager.TasksFilePath);
+                    tasks = JsonSerializer.Deserialize<List<TaskItem>>(json) ?? new List<TaskItem>();
+                }
+                catch { /* 파일이 비어있거나 손상된 경우 무시 */ }
             }
 
-            // Create a view model list
             var taskColorVMs = new List<TaskColorViewModel>();
             foreach (var task in tasks)
             {
-                // Get color from settings, or use a default
                 string colorHex = "#FFFFFFFF"; // Default to white
                 if (Settings.TaskColors.ContainsKey(task.Text))
                 {
@@ -84,39 +84,22 @@ namespace WorkPartner
             TaskColorsListBox.ItemsSource = taskColorVMs.OrderBy(t => t.Name).ToList();
         }
 
-
         private void TaskColorsListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             if (TaskColorsListBox.SelectedItem is TaskColorViewModel selectedTask)
             {
-                var inputWindow = new InputWindow($"'{selectedTask.Name}'의 색상 변경", selectedTask.ColorHex)
+                Color initialColor = (Color)ColorConverter.ConvertFromString(selectedTask.ColorHex);
+                var colorPickerWindow = new ColorPickerWindow(initialColor) { Owner = Window.GetWindow(this) };
+
+                if (colorPickerWindow.ShowDialog() == true)
                 {
-                    Owner = Window.GetWindow(this)
-                };
-
-                if (inputWindow.ShowDialog() == true)
-                {
-                    string newColorHex = inputWindow.ResponseText.Trim();
-                    try
-                    {
-                        // Validate the color code by attempting to convert it
-                        new BrushConverter().ConvertFromString(newColorHex);
-
-                        // Update settings
-                        Settings.TaskColors[selectedTask.Name] = newColorHex;
-                        DataManager.SaveSettingsAndNotify(Settings);
-
-                        // Refresh the list
-                        LoadTaskColors();
-                    }
-                    catch (Exception)
-                    {
-                        MessageBox.Show("잘못된 색상 코드입니다. '#AARRGGBB' 또는 'Red'와 같은 형식으로 입력해주세요.", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
+                    string newColorHex = colorPickerWindow.SelectedColor.ToString();
+                    Settings.TaskColors[selectedTask.Name] = newColorHex;
+                    DataManager.SaveSettingsAndNotify(Settings);
+                    LoadTaskColors();
                 }
             }
         }
-
 
         #endregion
 
@@ -141,7 +124,8 @@ namespace WorkPartner
             DistractionProcessListBox.ItemsSource = Settings.DistractionProcesses;
             NagMessageTextBox.Text = Settings.FocusModeNagMessage;
             NagIntervalTextBox.Text = Settings.FocusModeNagIntervalSeconds.ToString();
-            TagRulesListView.ItemsSource = Settings.TagRules;
+            TagRulesListView.ItemsSource = Settings.TagRules.ToList(); // ToList()로 복사본을 바인딩
+            LoadTaskColors();
         }
         #endregion
 
@@ -186,11 +170,23 @@ namespace WorkPartner
                 catch { }
             }
 
+            // Add major browsers manually
+            string[] browserProcesses = { "chrome", "msedge", "whale", "firefox" };
+            foreach (var browser in browserProcesses)
+            {
+                if (!programs.ContainsKey(browser))
+                {
+                    programs[browser] = new InstalledProgram { DisplayName = $"{browser.ToUpper()} Browser", ProcessName = browser };
+                }
+            }
+
+
             Application.Current.Dispatcher.Invoke(() =>
             {
                 foreach (var program in programs.Values)
                 {
-                    program.Icon = GetIcon(program.IconPath);
+                    if (!string.IsNullOrEmpty(program.IconPath))
+                        program.Icon = GetIcon(program.IconPath);
                 }
             });
 
@@ -231,7 +227,7 @@ namespace WorkPartner
                 try
                 {
                     string processName = process.ProcessName.ToLower();
-                    if (addedProcesses.Contains(processName) || new[] { "chrome", "msedge", "whale" }.Contains(processName)) continue;
+                    if (addedProcesses.Contains(processName)) continue;
 
                     allRunningApps.Add(new InstalledProgram
                     {
@@ -258,9 +254,11 @@ namespace WorkPartner
                 if (string.IsNullOrEmpty(selectedKeyword)) return;
 
                 string targetList = (sender as Button)?.Tag as string;
-                if (targetList == "Work") WorkProcessInputTextBox.Text = selectedKeyword;
-                else if (targetList == "Passive") PassiveProcessInputTextBox.Text = selectedKeyword;
-                else if (targetList == "Distraction") DistractionProcessInputTextBox.Text = selectedKeyword;
+                TextBox targetTextBox = FindAssociatedTextBox(targetList);
+                if (targetTextBox != null)
+                {
+                    targetTextBox.Text = selectedKeyword;
+                }
             }
         }
 
@@ -291,117 +289,56 @@ namespace WorkPartner
                     return;
                 }
 
-                bool added = false;
-                if (_targetProcessList == "Work")
+                TextBox targetTextBox = FindAssociatedTextBox(_targetProcessList);
+                if (targetTextBox != null)
                 {
-                    if (!Settings.WorkProcesses.Contains(urlKeyword))
-                    {
-                        Settings.WorkProcesses.Add(urlKeyword);
-                        WorkProcessListBox.ItemsSource = null;
-                        WorkProcessListBox.ItemsSource = Settings.WorkProcesses;
-                        added = true;
-                    }
-                }
-                else if (_targetProcessList == "Passive")
-                {
-                    if (!Settings.PassiveProcesses.Contains(urlKeyword))
-                    {
-                        Settings.PassiveProcesses.Add(urlKeyword);
-                        PassiveProcessListBox.ItemsSource = null;
-                        PassiveProcessListBox.ItemsSource = Settings.PassiveProcesses;
-                        added = true;
-                    }
-                }
-                else if (_targetProcessList == "Distraction")
-                {
-                    if (!Settings.DistractionProcesses.Contains(urlKeyword))
-                    {
-                        Settings.DistractionProcesses.Add(urlKeyword);
-                        DistractionProcessListBox.ItemsSource = null;
-                        DistractionProcessListBox.ItemsSource = Settings.DistractionProcesses;
-                        added = true;
-                    }
-                }
-
-                if (added)
-                {
-                    SaveSettings();
+                    targetTextBox.Text = urlKeyword;
                 }
             };
             timer.Start();
         }
 
+        private void AddProcessToList(string process, ObservableCollection<string> list, ListBox listBox)
+        {
+            if (!string.IsNullOrEmpty(process) && !list.Contains(process))
+            {
+                list.Add(process);
+                DataManager.SaveSettingsAndNotify(Settings);
+                listBox.ItemsSource = null;
+                listBox.ItemsSource = list;
+            }
+        }
+
+        private void DeleteProcessFromList(ListBox listBox, ObservableCollection<string> list)
+        {
+            if (listBox.SelectedItem is string selected)
+            {
+                list.Remove(selected);
+                DataManager.SaveSettingsAndNotify(Settings);
+                listBox.ItemsSource = null;
+                listBox.ItemsSource = list;
+            }
+        }
+
         private void AddWorkProcessButton_Click(object sender, RoutedEventArgs e)
         {
-            var newProcess = WorkProcessInputTextBox.Text.Trim().ToLower();
-            if (!string.IsNullOrEmpty(newProcess) && !Settings.WorkProcesses.Contains(newProcess))
-            {
-                Settings.WorkProcesses.Add(newProcess);
-                WorkProcessInputTextBox.Clear();
-                SaveSettings();
-                WorkProcessListBox.ItemsSource = null;
-                WorkProcessListBox.ItemsSource = Settings.WorkProcesses;
-            }
+            AddProcessToList(WorkProcessInputTextBox.Text.Trim().ToLower(), Settings.WorkProcesses, WorkProcessListBox);
+            WorkProcessInputTextBox.Clear();
         }
-
         private void AddPassiveProcessButton_Click(object sender, RoutedEventArgs e)
         {
-            var newProcess = PassiveProcessInputTextBox.Text.Trim().ToLower();
-            if (!string.IsNullOrEmpty(newProcess) && !Settings.PassiveProcesses.Contains(newProcess))
-            {
-                Settings.PassiveProcesses.Add(newProcess);
-                PassiveProcessInputTextBox.Clear();
-                SaveSettings();
-                PassiveProcessListBox.ItemsSource = null;
-                PassiveProcessListBox.ItemsSource = Settings.PassiveProcesses;
-            }
+            AddProcessToList(PassiveProcessInputTextBox.Text.Trim().ToLower(), Settings.PassiveProcesses, PassiveProcessListBox);
+            PassiveProcessInputTextBox.Clear();
         }
-
         private void AddDistractionProcessButton_Click(object sender, RoutedEventArgs e)
         {
-            var newProcess = DistractionProcessInputTextBox.Text.Trim().ToLower();
-            if (!string.IsNullOrEmpty(newProcess) && !Settings.DistractionProcesses.Contains(newProcess))
-            {
-                Settings.DistractionProcesses.Add(newProcess);
-                DistractionProcessInputTextBox.Clear();
-                SaveSettings();
-                DistractionProcessListBox.ItemsSource = null;
-                DistractionProcessListBox.ItemsSource = Settings.DistractionProcesses;
-            }
+            AddProcessToList(DistractionProcessInputTextBox.Text.Trim().ToLower(), Settings.DistractionProcesses, DistractionProcessListBox);
+            DistractionProcessInputTextBox.Clear();
         }
 
-        private void DeleteWorkProcessButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (WorkProcessListBox.SelectedItem is string selected)
-            {
-                Settings.WorkProcesses.Remove(selected);
-                SaveSettings();
-                WorkProcessListBox.ItemsSource = null;
-                WorkProcessListBox.ItemsSource = Settings.WorkProcesses;
-            }
-        }
-
-        private void DeletePassiveProcessButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (PassiveProcessListBox.SelectedItem is string selected)
-            {
-                Settings.PassiveProcesses.Remove(selected);
-                SaveSettings();
-                PassiveProcessListBox.ItemsSource = null;
-                PassiveProcessListBox.ItemsSource = Settings.PassiveProcesses;
-            }
-        }
-
-        private void DeleteDistractionProcessButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (DistractionProcessListBox.SelectedItem is string selected)
-            {
-                Settings.DistractionProcesses.Remove(selected);
-                SaveSettings();
-                DistractionProcessListBox.ItemsSource = null;
-                DistractionProcessListBox.ItemsSource = Settings.DistractionProcesses;
-            }
-        }
+        private void DeleteWorkProcessButton_Click(object sender, RoutedEventArgs e) => DeleteProcessFromList(WorkProcessListBox, Settings.WorkProcesses);
+        private void DeletePassiveProcessButton_Click(object sender, RoutedEventArgs e) => DeleteProcessFromList(PassiveProcessListBox, Settings.PassiveProcesses);
+        private void DeleteDistractionProcessButton_Click(object sender, RoutedEventArgs e) => DeleteProcessFromList(DistractionProcessListBox, Settings.DistractionProcesses);
 
         private void Setting_Changed(object sender, RoutedEventArgs e)
         {
@@ -460,7 +397,7 @@ namespace WorkPartner
             {
                 Settings.TagRules[keyword] = tag;
                 TagRulesListView.ItemsSource = null;
-                TagRulesListView.ItemsSource = Settings.TagRules;
+                TagRulesListView.ItemsSource = Settings.TagRules.ToList();
                 SaveSettings();
                 KeywordInput.Clear();
                 TagInput.Clear();
@@ -479,7 +416,7 @@ namespace WorkPartner
                 {
                     Settings.TagRules.Remove(selectedRule.Key);
                     TagRulesListView.ItemsSource = null;
-                    TagRulesListView.ItemsSource = Settings.TagRules;
+                    TagRulesListView.ItemsSource = Settings.TagRules.ToList();
                     SaveSettings();
                 }
             }
@@ -524,8 +461,6 @@ namespace WorkPartner
         #endregion
 
         #region 자동완성 로직
-
-        // 텍스트가 변경될 때 호출되는 공통 이벤트 핸들러
         private void AutoComplete_TextChanged(object sender, TextChangedEventArgs e)
         {
             var textBox = sender as TextBox;
@@ -560,7 +495,7 @@ namespace WorkPartner
                 popup.IsOpen = false;
             }
         }
-        // 추천 목록에서 항목을 선택했을 때
+
         private void SuggestionListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var listBox = sender as ListBox;
@@ -574,12 +509,10 @@ namespace WorkPartner
                 textBox.TextChanged -= AutoComplete_TextChanged;
                 textBox.Text = selectedProgram.ProcessName;
                 textBox.TextChanged += AutoComplete_TextChanged;
-
                 popup.IsOpen = false;
             }
         }
 
-        // 키보드 입력(Enter, 화살표 키 등)을 처리하기 위한 핸들러
         private void AutoComplete_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             var fe = sender as FrameworkElement;
@@ -644,39 +577,44 @@ namespace WorkPartner
         #endregion
 
         #region 스크롤 개선 로직
+        private void HandlePreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (e.Handled) return;
+
+            var element = sender as UIElement;
+            var scrollViewer = FindVisualParent<ScrollViewer>(element);
+
+            if (scrollViewer == null) return;
+
+            var parentScrollViewer = FindVisualParent<ScrollViewer>(scrollViewer);
+            if (parentScrollViewer == null) return;
+
+            if (e.Delta < 0) // Scrolling Down
+            {
+                // If the inner ScrollViewer is at the bottom, scroll the parent
+                if (scrollViewer.VerticalOffset >= scrollViewer.ScrollableHeight)
+                {
+                    parentScrollViewer.ScrollToVerticalOffset(parentScrollViewer.VerticalOffset - e.Delta);
+                    e.Handled = true;
+                }
+            }
+            else // Scrolling Up
+            {
+                // If the inner ScrollViewer is at the top, scroll the parent
+                if (scrollViewer.VerticalOffset <= 0)
+                {
+                    parentScrollViewer.ScrollToVerticalOffset(parentScrollViewer.VerticalOffset - e.Delta);
+                    e.Handled = true;
+                }
+            }
+        }
+
         private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
         {
             DependencyObject parentObject = VisualTreeHelper.GetParent(child);
             if (parentObject == null) return null;
             T parent = parentObject as T;
-            if (parent != null)
-            {
-                return parent;
-            }
-            else
-            {
-                return FindVisualParent<T>(parentObject);
-            }
-        }
-
-        private void HandlePreviewMouseWheel(object sender, MouseWheelEventArgs e)
-        {
-            if (sender is UIElement element && !e.Handled)
-            {
-                var scrollViewer = FindVisualParent<ScrollViewer>(element);
-                if (scrollViewer != null)
-                {
-                    if (e.Delta < 0)
-                    {
-                        scrollViewer.LineDown();
-                    }
-                    else
-                    {
-                        scrollViewer.LineUp();
-                    }
-                    e.Handled = true;
-                }
-            }
+            return parent ?? FindVisualParent<T>(parentObject);
         }
         #endregion
     }
