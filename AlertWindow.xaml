@@ -13,10 +13,7 @@
         ShowInTaskbar="False"
         WindowStartupLocation="CenterScreen"
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
-    <Border Background="#FFF0F8FF" CornerRadius="10" BorderBrush="#007AFF" BorderThickness="2">
-        <Border.Effect>
-            <DropShadowEffect Color="Black" Opacity="0.3" ShadowDepth="2" BlurRadius="10"/>
-        </Border.Effect>
+    <Border Background="#F0F8FF" CornerRadius="10" BorderBrush="#007AFF" BorderThickness="2" Effect="{StaticResource {x:Static SystemParameters.DropShadowEffectKey}}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -37,4 +34,3 @@
         </Grid>
     </Border>
 </Window>
-

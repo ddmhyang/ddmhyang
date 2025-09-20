@@ -249,13 +249,7 @@
     <Compile Include="ClosetPage.xaml.cs">
       <DependentUpon>ClosetPage.xaml</DependentUpon>
     </Compile>
-    <Compile Include="ColorPickerWindow.xaml.cs">
-      <DependentUpon>ColorPickerWindow.xaml</DependentUpon>
-    </Compile>
     <Compile Include="DataManager.cs" />
-    <Compile Include="DateEditWindow.xaml.cs">
-      <DependentUpon>DateEditWindow.xaml</DependentUpon>
-    </Compile>
     <Compile Include="InputWindow.xaml.cs">
       <DependentUpon>InputWindow.xaml</DependentUpon>
     </Compile>
@@ -275,9 +269,6 @@
     </Compile>
     <Compile Include="SoundPlayer.cs" />
     <Compile Include="TaskItem.cs" />
-    <Compile Include="TaskSelectionWindow.xaml.cs">
-      <DependentUpon>TaskSelectionWindow.xaml</DependentUpon>
-    </Compile>
     <Compile Include="TimeLogEntry.cs" />
     <Compile Include="TimerMode.cs" />
     <Compile Include="MemoItem.cs" />
@@ -311,15 +302,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="ColorPickerWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="DashboardPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="DateEditWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -358,10 +341,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="ShopPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="TaskSelectionWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -76,7 +76,7 @@
                                 </Popup>
                             </Grid>
                             <Button Content="실행 중인 앱에서 선택" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Work"/>
-                            <Button Content="현재 활성 사이트 추가" Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Work"/>
+                            <Button Content="3초 후 활성 탭 추가" Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Work"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -108,7 +108,7 @@
                                 </Popup>
                             </Grid>
                             <Button Content="실행 중인 앱에서 선택" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Passive"/>
-                            <Button Content="현재 활성 사이트 추가" Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Passive"/>
+                            <Button Content="3초 후 활성 탭 추가" Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Passive"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -140,7 +140,7 @@
                                 </Popup>
                             </Grid>
                             <Button Content="실행 중인 앱에서 선택" Click="SelectRunningAppButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#5bc0de" Tag="Distraction"/>
-                            <Button Content="현재 활성 사이트 추가" Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Distraction"/>
+                            <Button Content="3초 후 활성 탭 추가" Click="AddActiveTabButton_Click" Margin="0,5,0,0" FontSize="11" Padding="8,4" Background="#f0ad4e" Tag="Distraction"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -159,12 +159,15 @@
                 <Border Style="{StaticResource PanelBorderStyle}">
                     <StackPanel>
                         <TextBlock Text="과목을 더블클릭하여 색상을 변경하세요." Margin="0,0,0,10" Foreground="Gray"/>
-                        <ListBox x:Name="TaskColorsListBox" Height="150" Margin="0,0,0,10" MouseDoubleClick="TaskColorsListBox_MouseDoubleClick" PreviewMouseWheel="HandlePreviewMouseWheel">
+                        <ListBox x:Name="TaskColorsListBox" Height="150" Margin="0,0,0,10" MouseDoubleClick="TaskColorsListBox_MouseDoubleClick">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
-                                        <Border Width="20" Height="20" Margin="0,0,10,0" BorderBrush="Gray" BorderThickness="1"
-                                                Background="{Binding ColorBrush}"/>
+                                        <Border Width="20" Height="20" Margin="0,0,10,0" BorderBrush="Gray" BorderThickness="1">
+                                            <Border.Background>
+                                                <SolidColorBrush Color="{Binding ColorBrush.Color}" />
+                                            </Border.Background>
+                                        </Border>
                                         <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </DataTemplate>

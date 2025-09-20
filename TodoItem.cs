@@ -9,16 +9,17 @@ namespace WorkPartner
     {
         private string _text;
         private bool _isCompleted;
-        private DateTime _date;
+        private DateTime? _dueDate;
 
         public string Text { get => _text; set { _text = value; OnPropertyChanged(nameof(Text)); } }
         public bool IsCompleted { get => _isCompleted; set { _isCompleted = value; OnPropertyChanged(nameof(IsCompleted)); } }
-        public DateTime Date { get => _date; set { _date = value; OnPropertyChanged(nameof(Date)); } }
+        public DateTime? DueDate { get => _dueDate; set { _dueDate = value; OnPropertyChanged(nameof(DueDate)); } }
         public ObservableCollection<TodoItem> SubTasks { get; set; }
         public ObservableCollection<string> Tags { get; set; }
 
         // [속성 추가] 이 할 일에 대해 보상이 지급되었는지 확인하는 플래그입니다.
         public bool HasBeenRewarded { get; set; }
+        public DateTime Date { get; set; } // [추가] 할 일 날짜
 
         public TodoItem()
         {
@@ -26,7 +27,7 @@ namespace WorkPartner
             SubTasks = new ObservableCollection<TodoItem>();
             Tags = new ObservableCollection<string>();
             HasBeenRewarded = false; // 기본값은 '보상 안 됨'
-            Date = DateTime.Today;
+            Date = DateTime.Today.Date; // [수정] 날짜를 기본값으로 설정
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
