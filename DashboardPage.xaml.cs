@@ -113,7 +113,7 @@ namespace WorkPartner
                 }
                 catch
                 {
-                    // Fallback to default logic if color string is invalid
+                    // 설정 파일에 잘못된 색상 코드가 있을 경우 무시하고 아래에서 새로 할당합니다.
                 }
             }
 

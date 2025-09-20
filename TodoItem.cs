@@ -16,6 +16,8 @@ namespace WorkPartner
         public DateTime Date { get => _date; set { _date = value; OnPropertyChanged(nameof(Date)); } }
         public ObservableCollection<TodoItem> SubTasks { get; set; }
         public ObservableCollection<string> Tags { get; set; }
+
+        // [속성 추가] 이 할 일에 대해 보상이 지급되었는지 확인하는 플래그입니다.
         public bool HasBeenRewarded { get; set; }
 
         public TodoItem()
@@ -23,7 +25,7 @@ namespace WorkPartner
             Text = "새로운 할 일";
             SubTasks = new ObservableCollection<TodoItem>();
             Tags = new ObservableCollection<string>();
-            HasBeenRewarded = false;
+            HasBeenRewarded = false; // 기본값은 '보상 안 됨'
             Date = DateTime.Today;
         }
 

@@ -62,12 +62,8 @@ namespace WorkPartner
             List<TaskItem> tasks = new List<TaskItem>();
             if (File.Exists(DataManager.TasksFilePath))
             {
-                try
-                {
-                    var json = File.ReadAllText(DataManager.TasksFilePath);
-                    tasks = JsonSerializer.Deserialize<List<TaskItem>>(json) ?? new List<TaskItem>();
-                }
-                catch { /* 파일이 비어있거나 손상된 경우 무시 */ }
+                var json = File.ReadAllText(DataManager.TasksFilePath);
+                tasks = JsonSerializer.Deserialize<List<TaskItem>>(json) ?? new List<TaskItem>();
             }
 
             var taskColorVMs = new List<TaskColorViewModel>();
@@ -124,7 +120,7 @@ namespace WorkPartner
             DistractionProcessListBox.ItemsSource = Settings.DistractionProcesses;
             NagMessageTextBox.Text = Settings.FocusModeNagMessage;
             NagIntervalTextBox.Text = Settings.FocusModeNagIntervalSeconds.ToString();
-            TagRulesListView.ItemsSource = Settings.TagRules.ToList(); // ToList()로 복사본을 바인딩
+            TagRulesListView.ItemsSource = Settings.TagRules.ToList();
             LoadTaskColors();
         }
         #endregion
@@ -531,11 +527,15 @@ namespace WorkPartner
                     {
                         suggestionBox.SelectedIndex++;
                     }
+                    else if (suggestionBox.Items.Count > 0)
+                    {
+                        suggestionBox.SelectedIndex = 0;
+                    }
                 }
                 else if (e.Key == Key.Up)
                 {
                     suggestionBox.Focus();
-                    if (suggestionBox.SelectedIndex > 0)
+                    if (suggestionBox.Items.Count > 0 && suggestionBox.SelectedIndex > 0)
                     {
                         suggestionBox.SelectedIndex--;
                     }
@@ -583,27 +583,33 @@ namespace WorkPartner
 
             var element = sender as UIElement;
             var scrollViewer = FindVisualParent<ScrollViewer>(element);
-
             if (scrollViewer == null) return;
 
-            var parentScrollViewer = FindVisualParent<ScrollViewer>(scrollViewer);
-            if (parentScrollViewer == null) return;
-
-            if (e.Delta < 0) // Scrolling Down
+            // Scroll the inner ScrollViewer first
+            if (e.Delta < 0) // Scrolling down
             {
-                // If the inner ScrollViewer is at the bottom, scroll the parent
-                if (scrollViewer.VerticalOffset >= scrollViewer.ScrollableHeight)
+                if (scrollViewer.VerticalOffset < scrollViewer.ScrollableHeight)
                 {
-                    parentScrollViewer.ScrollToVerticalOffset(parentScrollViewer.VerticalOffset - e.Delta);
+                    scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset + 48);
                     e.Handled = true;
                 }
             }
-            else // Scrolling Up
+            else // Scrolling up
             {
-                // If the inner ScrollViewer is at the top, scroll the parent
-                if (scrollViewer.VerticalOffset <= 0)
+                if (scrollViewer.VerticalOffset > 0)
                 {
-                    parentScrollViewer.ScrollToVerticalOffset(parentScrollViewer.VerticalOffset - e.Delta);
+                    scrollViewer.ScrollToVerticalOffset(scrollViewer.VerticalOffset - 48);
+                    e.Handled = true;
+                }
+            }
+
+            // If the inner ScrollViewer is at its limit, bubble the event up
+            if (!e.Handled)
+            {
+                var parent = FindVisualParent<ScrollViewer>(scrollViewer);
+                if (parent != null)
+                {
+                    parent.ScrollToVerticalOffset(parent.VerticalOffset - e.Delta);
                     e.Handled = true;
                 }
             }

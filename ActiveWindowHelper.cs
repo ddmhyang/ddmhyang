@@ -9,7 +9,8 @@ namespace WorkPartner
 {
     public static class ActiveWindowHelper
     {
-        [DllImport("user2.dll")]
+        // ... (기존 DllImport 코드는 그대로 유지)
+        [DllImport("user32.dll")]
         private static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll", SetLastError = true)]
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
@@ -30,9 +31,7 @@ namespace WorkPartner
             try
             {
                 IntPtr handle = GetForegroundWindow();
-                if (handle == IntPtr.Zero) return "unknown";
                 GetWindowThreadProcessId(handle, out uint processId);
-                if (processId == 0) return "unknown";
                 Process process = Process.GetProcessById((int)processId);
                 if (process.ProcessName.ToLower() == "idle") return "unknown";
                 return process.ProcessName.ToLower();
@@ -60,12 +59,10 @@ namespace WorkPartner
                 IntPtr handle = GetForegroundWindow();
                 if (handle == IntPtr.Zero) return null;
                 GetWindowThreadProcessId(handle, out uint processId);
-                if (processId == 0) return null;
                 var process = Process.GetProcessById((int)processId);
 
-                if (process.MainWindowHandle == IntPtr.Zero) return null;
-
                 string processName = process.ProcessName.ToLower();
+
                 if (processName != "chrome" && processName != "msedge" && processName != "whale" && processName != "firefox")
                 {
                     return null;
@@ -74,11 +71,12 @@ namespace WorkPartner
                 var element = AutomationElement.FromHandle(handle);
                 if (element == null) return null;
 
+                // 주소창을 찾기 위한 여러 조건들
                 var conditions = new OrCondition(
-                    new PropertyCondition(AutomationElement.NameProperty, "주소창 및 검색창"),
-                    new PropertyCondition(AutomationElement.NameProperty, "Address and search bar"),
-                    new PropertyCondition(AutomationElement.AutomationIdProperty, "urlbar-input"),
-                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit)
+                    new PropertyCondition(AutomationElement.NameProperty, "주소창 및 검색창"), // Chrome, Edge (Korean)
+                    new PropertyCondition(AutomationElement.NameProperty, "Address and search bar"), // Chrome, Edge (English)
+                    new PropertyCondition(AutomationElement.AutomationIdProperty, "urlbar-input"), // Firefox
+                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit) // General fallback
                 );
 
                 var addressBar = element.FindFirst(TreeScope.Descendants, conditions);

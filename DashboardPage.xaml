@@ -138,14 +138,13 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBox x:Name="TaskInput" KeyDown="TaskInput_KeyDown"/>
-                            <Button Grid.Column="1" Content="추가" Click="AddTaskButton_Click" Margin="10,0,0,0"/>
+                            <TextBox x:Name="TaskInput" KeyDown="TaskInput_KeyDown" Grid.Column="0"/>
+                            <Button Grid.Column="1" Content="추가" Click="AddTaskButton_Click" Margin="10,0,5,0"/>
+                            <Button Grid.Column="2" Content="수정" Click="EditTaskButton_Click"/>
                         </Grid>
-                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                            <Button Content="선택 과목 수정" Click="EditTaskButton_Click" Margin="0,0,5,0" Style="{StaticResource SubtleButton}"/>
-                            <Button Content="선택 과목 삭제" Click="DeleteTaskButton_Click" Background="#d9534f" Foreground="White"/>
-                        </StackPanel>
+                        <Button Content="선택한 과목 삭제" Click="DeleteTaskButton_Click" Margin="0,5,0,0" Background="#d9534f" Foreground="White"/>
 
                         <ListBox x:Name="TaskListBox" ItemsSource="{Binding TaskItems}" SelectionChanged="TaskListBox_SelectionChanged" DisplayMemberPath="Text" Margin="0,15,0,0" MaxHeight="150" BorderThickness="0" PreviewMouseWheel="HandlePreviewMouseWheel"/>
                     </StackPanel>

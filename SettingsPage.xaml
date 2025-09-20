@@ -163,7 +163,8 @@
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
-                                        <Border Width="20" Height="20" Margin="0,0,10,0" BorderBrush="Gray" BorderThickness="1" Background="{Binding ColorBrush}"/>
+                                        <Border Width="20" Height="20" Margin="0,0,10,0" BorderBrush="Gray" BorderThickness="1"
+                                                Background="{Binding ColorBrush}"/>
                                         <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </DataTemplate>
