@@ -1,9 +1,7 @@
-﻿// 파일: DataManager.cs (최종 수정본)
-
-using System;
+﻿using System;
 using System.IO;
 using System.Text.Json;
-using System.Windows;
+using System.Windows; // MessageBox를 위해 추가
 
 namespace WorkPartner
 {
@@ -11,8 +9,10 @@ namespace WorkPartner
     {
         public static event Action SettingsUpdated;
 
+        // 1. AppData 안에 우리 프로그램 전용 폴더 경로를 만듭니다.
         private static readonly string AppDataFolder;
 
+        // 2. 각 파일의 전체 경로를 속성으로 만들어 쉽게 가져다 쓸 수 있게 합니다.
         public static string SettingsFilePath { get; }
         public static string TimeLogFilePath { get; }
         public static string TasksFilePath { get; }
@@ -21,6 +21,7 @@ namespace WorkPartner
         public static string ModelFilePath { get; }
         public static string ItemsDbFilePath { get; }
 
+        // 프로그램이 시작될 때 단 한 번만 실행되는 생성자
         static DataManager()
         {
             AppDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WorkPartner");
@@ -57,6 +58,8 @@ namespace WorkPartner
             SettingsUpdated?.Invoke();
         }
 
+        // AI 모델 파일과 같이, 처음에는 프로그램 폴더에 있다가
+        // 수정이 필요할 때 AppData로 복사해야 하는 파일을 준비하는 메서드
         public static void PrepareFileForEditing(string sourceFileName)
         {
             try
@@ -64,6 +67,7 @@ namespace WorkPartner
                 string sourcePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, sourceFileName);
                 string destinationPath = Path.Combine(AppDataFolder, sourceFileName);
 
+                // AppData에 파일이 없고, 원본 파일은 있을 때만 복사
                 if (!File.Exists(destinationPath) && File.Exists(sourcePath))
                 {
                     File.Copy(sourcePath, destinationPath);
@@ -73,22 +77,6 @@ namespace WorkPartner
             {
                 MessageBox.Show($"파일 준비 중 오류 발생: {sourceFileName}\n{ex.Message}");
             }
-        }
-
-        /// <summary>
-        /// 과목(작업) 이름에 해당하는 색상 코드를 반환합니다.
-        /// 설정된 색상이 없으면 기본 색상을 반환합니다.
-        /// </summary>
-        /// <param name="taskName">색상을 찾을 과목 이름</param>
-        /// <returns>16진수 색상 코드 (예: "#FF0000")</returns>
-        public static string GetColorForTask(string taskName)
-        {
-            var settings = LoadSettings();
-            if (settings.TaskColors != null && settings.TaskColors.TryGetValue(taskName, out var color))
-            {
-                return color;
-            }
-            return "#808080"; // 설정된 색상이 없을 때 사용할 기본 색상 (회색)
         }
     }
 }

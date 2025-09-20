@@ -11,6 +11,5 @@ namespace WorkPartner
         {
             return Text;
         }
-
     }
 }
