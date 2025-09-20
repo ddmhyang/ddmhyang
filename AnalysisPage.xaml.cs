@@ -1,5 +1,4 @@
-﻿// 파일: AnalysisPage.xaml.cs (수정)
-// [수정] async 한정자를 추가하여 await 연산자 오류를 해결했습니다.
+﻿// 파일: AnalysisPage.xaml.cs
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,6 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using LiveCharts;
 using LiveCharts.Wpf;
 using WorkPartner.AI;
@@ -39,162 +39,260 @@ namespace WorkPartner
         private void InitializePredictionUI()
         {
             DayOfWeekPredictionComboBox.ItemsSource = Enum.GetValues(typeof(DayOfWeek)).Cast<DayOfWeek>().Select(d => ToKoreanDayOfWeek(d));
-            DayOfWeekPredictionComboBox.SelectedIndex = (int)DateTime.Today.DayOfWeek;
-            HourPredictionComboBox.ItemsSource = Enumerable.Range(0, 24).Select(h => $"{h} 시");
-            HourPredictionComboBox.SelectedIndex = DateTime.Now.Hour;
+            HourPredictionComboBox.ItemsSource = Enumerable.Range(0, 24).Select(h => $"{h:00}시");
+
+            DayOfWeekPredictionComboBox.SelectedItem = ToKoreanDayOfWeek(DateTime.Today.DayOfWeek);
+            HourPredictionComboBox.SelectedItem = $"{DateTime.Now.Hour:00}시";
         }
 
-        public async void LoadAndAnalyzeData()
+        // [NEW] Public method to be called from MainWindow, fixing CS1061
+        public async Task LoadAndAnalyzeData()
         {
-            LoadTimeLogs();
-            LoadTasksForPrediction();
-            if (!_allTimeLogs.Any()) return;
+            await LoadDataAsync();
+            UpdateAllAnalyses();
+        }
 
-            await Task.Run(() => _predictionService.TrainModel());
+        private async void AnalysisPage_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+        {
+            if (e.NewValue is true)
+            {
+                await LoadAndAnalyzeData();
+            }
+        }
 
-            AnalyzeOverallStats();
-            AnalyzeFocusScores();
+        private async Task LoadDataAsync()
+        {
+            if (File.Exists(_timeLogFilePath))
+            {
+                try
+                {
+                    using (FileStream stream = File.OpenRead(_timeLogFilePath))
+                    {
+                        _allTimeLogs = await JsonSerializer.DeserializeAsync<List<TimeLogEntry>>(stream) ?? new List<TimeLogEntry>();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error loading time logs: {ex.Message}");
+                    _allTimeLogs = new List<TimeLogEntry>();
+                }
+            }
+            if (File.Exists(_tasksFilePath))
+            {
+                try
+                {
+                    using (FileStream stream = File.OpenRead(_tasksFilePath))
+                    {
+                        var tasks = await JsonSerializer.DeserializeAsync<List<TaskItem>>(stream) ?? new List<TaskItem>();
+                        TaskPredictionComboBox.ItemsSource = tasks.Select(t => t.Text);
+                        if (tasks.Any()) TaskPredictionComboBox.SelectedIndex = 0;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error loading tasks: {ex.Message}");
+                }
+            }
+        }
+
+        private void UpdateAllAnalyses()
+        {
             UpdateTaskAnalysis(DateTime.MinValue, DateTime.MaxValue);
-            GenerateFocusBasedAiSuggestion();
+            UpdateHourlyAnalysis();
+            UpdateTaskFocusAnalysis();
             GenerateWorkRestPatternSuggestion();
         }
 
-        private void LoadTasksForPrediction()
+        private void UpdateTaskAnalysis(DateTime start, DateTime end)
         {
-            if (!File.Exists(_tasksFilePath)) return;
-            var json = File.ReadAllText(_tasksFilePath);
-            var tasks = JsonSerializer.Deserialize<List<TaskItem>>(json);
-            TaskPredictionComboBox.ItemsSource = tasks;
-            if (tasks != null && tasks.Any()) TaskPredictionComboBox.SelectedIndex = 0;
+            var filteredLogs = _allTimeLogs.Where(log => log.StartTime >= start && log.StartTime <= end.AddDays(1).AddTicks(-1));
+            var analysis = filteredLogs
+                .GroupBy(log => log.TaskText)
+                .Select(group => new TaskAnalysisResult
+                {
+                    TaskName = group.Key,
+                    TotalTime = TimeSpan.FromSeconds(group.Sum(log => log.Duration.TotalSeconds))
+                })
+                .OrderByDescending(item => item.TotalTime)
+                .ToList();
+
+            TaskAnalysisGrid.ItemsSource = analysis;
         }
 
-        private void PredictButton_Click(object sender, RoutedEventArgs e)
+        private void UpdateHourlyAnalysis()
         {
-            if (TaskPredictionComboBox.SelectedItem == null ||
-               DayOfWeekPredictionComboBox.SelectedItem == null ||
-               HourPredictionComboBox.SelectedItem == null)
-            {
-                MessageBox.Show("모든 예측 조건을 선택해주세요.");
-                return;
-            }
+            HourAnalysisSeries.Clear();
+            var hourlyFocus = _allTimeLogs
+                .Where(log => log.FocusScore > 0)
+                .GroupBy(log => log.StartTime.Hour)
+                .Select(g => new { Hour = g.Key, AvgFocus = g.Average(l => l.FocusScore) })
+                .OrderBy(x => x.Hour)
+                .ToList();
 
-            var input = new ModelInput
-            {
-                TaskName = (TaskPredictionComboBox.SelectedItem as TaskItem).Text,
-                DayOfWeek = (float)DayOfWeekPredictionComboBox.SelectedIndex,
-                Hour = (float)HourPredictionComboBox.SelectedIndex,
-                Duration = 60
-            };
-
-            float predictedScore = _predictionService.Predict(input);
-            PredictionResultTextBlock.Text = $"예상 집중도: {predictedScore:F2} / 5.0";
-        }
-
-        private void LoadTimeLogs()
-        {
-            _allTimeLogs.Clear();
-            if (File.Exists(_timeLogFilePath))
-            {
-                var json = File.ReadAllText(_timeLogFilePath);
-                var loadedLogs = JsonSerializer.Deserialize<List<TimeLogEntry>>(json);
-                if (loadedLogs != null) _allTimeLogs = loadedLogs;
-            }
-        }
-
-        private void AnalyzeOverallStats()
-        {
-            var totalWorkTime = new TimeSpan(_allTimeLogs.Sum(log => log.Duration.Ticks));
-            var totalDays = _allTimeLogs.Select(log => log.StartTime.Date).Distinct().Count();
-            TotalWorkTimeTextBlock.Text = $"{(int)totalWorkTime.TotalHours} 시간 {totalWorkTime.Minutes} 분";
-            TotalDaysTextBlock.Text = $"{totalDays} 일";
-            var maxConcentrationTime = _allTimeLogs.Any() ? _allTimeLogs.Max(log => log.Duration) : TimeSpan.Zero;
-            MaxConcentrationTimeTextBlock.Text = $"{(int)maxConcentrationTime.TotalMinutes} 분";
-            var hourlyWork = _allTimeLogs.GroupBy(log => log.StartTime.Hour).Select(g => new { Hour = g.Key, TotalMinutes = g.Sum(log => log.Duration.TotalMinutes) }).ToList();
-            var peakHourData = hourlyWork.OrderByDescending(h => h.TotalMinutes).FirstOrDefault();
-            PeakConcentrationHourTextBlock.Text = peakHourData != null ? $"{peakHourData.Hour} 시 ~ {peakHourData.Hour + 1} 시" : "-";
             var chartValues = new ChartValues<double>();
-            var labels = new string[24];
+            var labels = new List<string>();
+
             for (int i = 0; i < 24; i++)
             {
-                var hourData = hourlyWork.FirstOrDefault(h => h.Hour == i);
-                chartValues.Add(hourData?.TotalMinutes ?? 0);
-                labels[i] = i.ToString();
+                var data = hourlyFocus.FirstOrDefault(h => h.Hour == i);
+                chartValues.Add(data?.AvgFocus ?? 0);
+                labels.Add($"{i}시");
             }
-            HourAnalysisSeries.Clear();
-            HourAnalysisSeries.Add(new ColumnSeries { Title = "작업량", Values = chartValues });
-            HourLabels = labels;
-            YFormatter = value => value.ToString("N0");
+
+            HourAnalysisSeries.Add(new LineSeries
+            {
+                Title = "평균 집중도",
+                Values = chartValues,
+                PointGeometry = null
+            });
+
+            HourLabels = labels.ToArray();
+            YFormatter = value => value.ToString("N1");
+
+            DataContext = null;
+            DataContext = this;
         }
 
-        private void AnalyzeFocusScores()
+        private void UpdateTaskFocusAnalysis()
         {
-            var ratedLogs = _allTimeLogs.Where(log => log.FocusScore > 0).ToList();
-            if (!ratedLogs.Any())
-            {
-                OverallAverageFocusScoreTextBlock.Text = "평가 데이터 없음";
-                TaskFocusListView.ItemsSource = null;
-                return;
-            }
-
-            var overallAverage = ratedLogs.Average(log => log.FocusScore);
-            OverallAverageFocusScoreTextBlock.Text = $"{overallAverage:F2} / 5.0";
-
-            var taskFocusAnalysis = ratedLogs
+            var analysis = _allTimeLogs
+                .Where(log => log.FocusScore > 0)
                 .GroupBy(log => log.TaskText)
                 .Select(group => new TaskFocusAnalysisResult
                 {
                     TaskName = group.Key,
                     AverageFocusScore = group.Average(log => log.FocusScore),
-                    TotalTime = new TimeSpan(group.Sum(log => log.Duration.Ticks))
+                    TotalTime = TimeSpan.FromSeconds(group.Sum(l => l.Duration.TotalSeconds))
                 })
-                .OrderByDescending(result => result.AverageFocusScore)
+                .OrderByDescending(item => item.AverageFocusScore)
                 .ToList();
 
-            TaskFocusListView.ItemsSource = taskFocusAnalysis;
-        }
-
-        private void UpdateTaskAnalysis(DateTime startDate, DateTime endDate)
-        {
-            var filteredLogs = _allTimeLogs.Where(log => log.StartTime.Date >= startDate.Date && log.StartTime.Date <= endDate.Date).ToList();
-            var taskAnalysis = filteredLogs.GroupBy(log => log.TaskText).Select(group => new TaskAnalysisResult { TaskName = group.Key, TotalTime = new TimeSpan(group.Sum(log => log.Duration.Ticks)) }).OrderByDescending(result => result.TotalTime).ToList();
-            TaskAnalysisListView.ItemsSource = taskAnalysis;
-        }
-
-        private void GenerateFocusBasedAiSuggestion()
-        {
-            var ratedLogs = _allTimeLogs.Where(log => log.FocusScore > 0).ToList();
-            if (ratedLogs.Count < 3) { GoldenTimeSuggestionTextBlock.Text = "집중도 평가 데이터가 더 쌓이면, 당신의 '황금 시간대'를 분석해 드릴게요!"; return; }
-            var bestSlot = ratedLogs.GroupBy(log => new { log.StartTime.DayOfWeek, log.StartTime.Hour }).Select(g => new { Day = g.Key.DayOfWeek, Hour = g.Key.Hour, AverageFocusScore = g.Average(log => log.FocusScore) }).OrderByDescending(s => s.AverageFocusScore).FirstOrDefault();
-            if (bestSlot == null) return;
-            var peakTask = ratedLogs.Where(log => log.StartTime.DayOfWeek == bestSlot.Day && log.StartTime.Hour == bestSlot.Hour).GroupBy(log => log.TaskText).Select(g => new { TaskName = g.Key, TotalDuration = g.Sum(log => log.Duration.TotalSeconds) }).OrderByDescending(t => t.TotalDuration).FirstOrDefault();
-            string peakDayStr = ToKoreanDayOfWeek(bestSlot.Day);
-            string suggestion = (peakTask != null) ? $"분석 결과, 주로 '{peakDayStr} {bestSlot.Hour}시'에 '{peakTask.TaskName}' 과목을 진행할 때 평균 집중도({bestSlot.AverageFocusScore:F1}점)가 가장 높았습니다!" : $"분석 결과, 주로 '{peakDayStr} {bestSlot.Hour}시'에 가장 높은 집중력(평균 {bestSlot.AverageFocusScore:F1}점)을 보여주셨습니다.";
-            GoldenTimeSuggestionTextBlock.Text = suggestion;
+            TaskFocusGrid.ItemsSource = analysis;
         }
 
         private void GenerateWorkRestPatternSuggestion()
         {
-            var ratedLogs = _allTimeLogs.Where(log => log.FocusScore > 0).OrderBy(l => l.StartTime).ToList();
-            if (ratedLogs.Count < 5) { WorkRestPatternSuggestionTextBlock.Text = "최적의 작업/휴식 패턴을 분석하기 위한 데이터가 조금 더 필요해요."; return; }
-            var patterns = new List<WorkRestPattern>();
-            for (int i = 0; i < ratedLogs.Count - 1; i++)
+            if (_allTimeLogs.Count < 10)
             {
-                var currentLog = ratedLogs[i];
-                var nextLog = ratedLogs[i + 1];
-                TimeSpan restTime = nextLog.StartTime - currentLog.EndTime;
-                if (restTime.TotalMinutes > 5 && restTime.TotalMinutes <= 120)
+                WorkRestPatternSuggestionTextBlock.Text = "데이터가 더 필요합니다. 최소 10개 이상의 학습 기록이 쌓이면 분석을 제공합니다.";
+                return;
+            }
+
+            var sessions = new List<WorkRestPattern>();
+            var sortedLogs = _allTimeLogs.OrderBy(l => l.StartTime).ToList();
+
+            for (int i = 0; i < sortedLogs.Count - 1; i++)
+            {
+                var currentLog = sortedLogs[i];
+                var nextLog = sortedLogs[i + 1];
+
+                if (currentLog.FocusScore > 0 && nextLog.FocusScore > 0)
                 {
-                    patterns.Add(new WorkRestPattern { WorkDurationMinutes = (int)currentLog.Duration.TotalMinutes, RestDurationMinutes = (int)restTime.TotalMinutes, NextSessionFocusScore = nextLog.FocusScore });
+                    var restTime = nextLog.StartTime - currentLog.EndTime;
+                    if (restTime.TotalMinutes > 1 && restTime.TotalHours < 2)
+                    {
+                        sessions.Add(new WorkRestPattern
+                        {
+                            WorkDurationMinutes = (int)currentLog.Duration.TotalMinutes,
+                            RestDurationMinutes = (int)restTime.TotalMinutes,
+                            NextSessionFocusScore = nextLog.FocusScore
+                        });
+                    }
                 }
             }
-            if (!patterns.Any()) { WorkRestPatternSuggestionTextBlock.Text = "규칙적인 휴식 패턴을 분석하는 중입니다. 조금만 더 힘내주세요!"; return; }
-            var bestPattern = patterns.GroupBy(p => (int)(p.WorkDurationMinutes / 15)).Select(g => new { WorkGroup = g.Key * 15, BestRest = g.GroupBy(p => (int)(p.RestDurationMinutes / 5)).Select(rg => new { RestGroup = rg.Key * 5, AvgFocus = rg.Average(p => p.NextSessionFocusScore) }).OrderByDescending(rg => rg.AvgFocus).FirstOrDefault() }).Where(x => x.BestRest != null).OrderByDescending(x => x.BestRest.AvgFocus).FirstOrDefault();
-            if (bestPattern != null) { WorkRestPatternSuggestionTextBlock.Text = $"AI 분석: 약 {bestPattern.WorkGroup}-{bestPattern.WorkGroup + 15}분 작업 후, {bestPattern.BestRest.RestGroup}-{bestPattern.BestRest.RestGroup + 5}분 휴식했을 때 다음 세션의 집중도가 가장 높았습니다. 이 패턴을 활용해보세요!"; }
+
+            if (!sessions.Any())
+            {
+                WorkRestPatternSuggestionTextBlock.Text = "패턴을 분석할 충분한 휴식 데이터가 없습니다.";
+                return;
+            }
+
+            var bestPattern = sessions
+                .GroupBy(p => new { Work = RoundToNearest(p.WorkDurationMinutes, 10), Rest = RoundToNearest(p.RestDurationMinutes, 5) })
+                .Select(g => new
+                {
+                    Pattern = g.Key,
+                    AvgFocus = g.Average(p => p.NextSessionFocusScore),
+                    Count = g.Count()
+                })
+                .Where(p => p.Count > 2)
+                .OrderByDescending(p => p.AvgFocus)
+                .FirstOrDefault();
+
+            if (bestPattern != null)
+            {
+                WorkRestPatternSuggestionTextBlock.Text = $"가장 효과적인 패턴은 약 {bestPattern.Pattern.Work}분 학습 후 {bestPattern.Pattern.Rest}분 휴식하는 것입니다. (평균 집중도: {bestPattern.AvgFocus:F1}점)";
+            }
+            else
+            {
+                WorkRestPatternSuggestionTextBlock.Text = "뚜렷한 최적의 패턴을 찾지 못했습니다. 꾸준히 기록을 추가해주세요.";
+            }
         }
 
-        private string ToKoreanDayOfWeek(DayOfWeek day) { switch (day) { case DayOfWeek.Monday: return "월요일"; case DayOfWeek.Tuesday: return "화요일"; case DayOfWeek.Wednesday: return "수요일"; case DayOfWeek.Thursday: return "목요일"; case DayOfWeek.Friday: return "금요일"; case DayOfWeek.Saturday: return "토요일"; case DayOfWeek.Sunday: return "일요일"; default: return string.Empty; } }
-        private void TodayButton_Click(object sender, RoutedEventArgs e) { UpdateTaskAnalysis(DateTime.Today, DateTime.Today); }
-        private void ThisWeekButton_Click(object sender, RoutedEventArgs e) { var today = DateTime.Today; var dayOfWeek = (int)today.DayOfWeek == 0 ? 6 : (int)today.DayOfWeek - 1; var startDate = today.AddDays(-dayOfWeek); var endDate = startDate.AddDays(6); UpdateTaskAnalysis(startDate, endDate); }
+        private int RoundToNearest(int number, int nearest)
+        {
+            return (int)(Math.Round(number / (double)nearest) * nearest);
+        }
+
+        private string ToKoreanDayOfWeek(DayOfWeek day)
+        {
+            switch (day)
+            {
+                case DayOfWeek.Sunday: return "일요일";
+                case DayOfWeek.Monday: return "월요일";
+                case DayOfWeek.Tuesday: return "화요일";
+                case DayOfWeek.Wednesday: return "수요일";
+                case DayOfWeek.Thursday: return "목요일";
+                case DayOfWeek.Friday: return "금요일";
+                case DayOfWeek.Saturday: return "토요일";
+                default: return "";
+            }
+        }
+
+        private DayOfWeek FromKoreanDayOfWeek(string day)
+        {
+            switch (day)
+            {
+                case "일요일": return DayOfWeek.Sunday;
+                case "월요일": return DayOfWeek.Monday;
+                case "화요일": return DayOfWeek.Tuesday;
+                case "수요일": return DayOfWeek.Wednesday;
+                case "목요일": return DayOfWeek.Thursday;
+                case "금요일": return DayOfWeek.Friday;
+                case "토요일": return DayOfWeek.Saturday;
+                default: throw new ArgumentException("Invalid day of week");
+            }
+        }
+
+        private void PredictButton_Click(object sender, RoutedEventArgs e)
+        {
+            var input = new ModelInput
+            {
+                TaskName = TaskPredictionComboBox.SelectedItem as string ?? "",
+                DayOfWeek = (float)FromKoreanDayOfWeek(DayOfWeekPredictionComboBox.SelectedItem as string),
+                Hour = (float)HourPredictionComboBox.SelectedIndex,
+                Duration = 60
+            };
+
+            float prediction = _predictionService.Predict(input);
+            PredictionResultTextBlock.Text = $"예측 집중도 점수: {prediction:F2} / 5.0";
+        }
+
+        private void HandlePreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (!e.Handled)
+            {
+                e.Handled = true;
+                var eventArg = new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta);
+                eventArg.RoutedEvent = UIElement.MouseWheelEvent;
+                eventArg.Source = sender;
+                var parent = (UIElement)sender;
+                parent.RaiseEvent(eventArg);
+            }
+        }
+
+        private void TodayButton_Click(object sender, RoutedEventArgs e) { var today = DateTime.Today; UpdateTaskAnalysis(today, today); }
+        private void ThisWeekButton_Click(object sender, RoutedEventArgs e) { var today = DateTime.Today; int dayOfWeek = (int)today.DayOfWeek - (int)DayOfWeek.Monday; var startDate = today.AddDays(-dayOfWeek); var endDate = startDate.AddDays(6); UpdateTaskAnalysis(startDate, endDate); }
         private void ThisMonthButton_Click(object sender, RoutedEventArgs e) { var today = DateTime.Today; var startDate = new DateTime(today.Year, today.Month, 1); var endDate = startDate.AddMonths(1).AddDays(-1); UpdateTaskAnalysis(startDate, endDate); }
         private void TotalButton_Click(object sender, RoutedEventArgs e) { UpdateTaskAnalysis(DateTime.MinValue, DateTime.MaxValue); }
         private void CustomDateButton_Click(object sender, RoutedEventArgs e) { if (StartDatePicker.SelectedDate.HasValue && EndDatePicker.SelectedDate.HasValue) { UpdateTaskAnalysis(StartDatePicker.SelectedDate.Value, EndDatePicker.SelectedDate.Value); } else { MessageBox.Show("시작 날짜와 종료 날짜를 모두 선택해주세요."); } }
@@ -204,3 +302,4 @@ namespace WorkPartner
     public class WorkRestPattern { public int WorkDurationMinutes { get; set; } public int RestDurationMinutes { get; set; } public int NextSessionFocusScore { get; set; } }
     public class TaskFocusAnalysisResult { public string TaskName { get; set; } public double AverageFocusScore { get; set; } public TimeSpan TotalTime { get; set; } public string TotalTimeFormatted => $"{(int)TotalTime.TotalHours}시간 {TotalTime.Minutes}분"; }
 }
+
