@@ -5,13 +5,14 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WorkPartner"
         mc:Ignorable="d"
-        Title="작업 파트너" Height="526" Width="682"
+        Title="작업 파트너" Height="800" Width="1200"
         Loaded="MainWindow_Loaded"
-        Closing="MainWindow_Closing">
+        Closing="MainWindow_Closing"
+        WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <Style x:Key="NavButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#444"/>
+            <Setter Property="Foreground" Value="#333"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Padding" Value="15,10"/>
@@ -42,8 +43,7 @@
         <Border Grid.Row="0" Background="#FDFDFD" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="5">
             <StackPanel x:Name="NavigationPanel" Orientation="Horizontal">
                 <Button x:Name="DashboardButton" Content="대시보드" Click="DashboardButton_Click" Style="{StaticResource NavButton}"/>
-                <Button Content="상점" Click="ShopButton_Click" Style="{StaticResource NavButton}"/>
-                <Button Content="옷장" Click="ClosetButton_Click" Style="{StaticResource NavButton}"/>
+                <Button x:Name="AvatarButton" Content="아바타 꾸미기" Click="AvatarButton_Click" Style="{StaticResource NavButton}"/>
                 <Button Content="분석" Click="AnalysisButton_Click" Style="{StaticResource NavButton}"/>
                 <Button Content="설정" Click="SettingsButton_Click" Style="{StaticResource NavButton}"/>
             </StackPanel>
@@ -52,3 +52,4 @@
         <ContentControl Grid.Row="1" x:Name="PageContent" Background="{StaticResource AppBackgroundBrush}"/>
     </Grid>
 </Window>
+

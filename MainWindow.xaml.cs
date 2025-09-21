@@ -1,12 +1,8 @@
-﻿// 파일: MainWindow.xaml.cs (수정)
-// [수정] Owner 속성 설정을 제거하고, Closing 이벤트를 통해 미니 타이머를 직접 닫도록 변경했습니다.
-using System;
-using System.IO;
-using System.Text.Json;
+﻿using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.ComponentModel;
 
 namespace WorkPartner
 {
@@ -15,8 +11,7 @@ namespace WorkPartner
         private DashboardPage _dashboardPage;
         private SettingsPage _settingsPage;
         private AnalysisPage _analysisPage;
-        private ShopPage _shopPage;
-        private ClosetPage _closetPage;
+        private AvatarCustomizationPage _avatarCustomizationPage; // ClosetPage를 AvatarCustomizationPage로 변경
         private MiniTimerWindow _miniTimerWindow;
 
         public MainWindow()
@@ -28,8 +23,7 @@ namespace WorkPartner
             _dashboardPage = new DashboardPage();
             _settingsPage = new SettingsPage();
             _analysisPage = new AnalysisPage();
-            _shopPage = new ShopPage();
-            _closetPage = new ClosetPage();
+            _avatarCustomizationPage = new AvatarCustomizationPage(); // 새 페이지 인스턴스 생성
 
             PageContent.Content = _dashboardPage;
             UpdateNavButtonSelection(DashboardButton);
@@ -42,7 +36,7 @@ namespace WorkPartner
 
         private void MainWindow_Closing(object sender, CancelEventArgs e)
         {
-            // 메인 창이 닫힐 때 미니 타이머 창도 함께 닫습니다.
+            _dashboardPage?.SaveSoundSettings(); // 대시보드 페이지의 설정을 저장
             _miniTimerWindow?.Close();
         }
 
@@ -69,10 +63,18 @@ namespace WorkPartner
             UpdateNavButtonSelection(sender as Button);
         }
 
-        private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        // 아바타 꾸미기 버튼 클릭 이벤트 핸들러
+        private void AvatarButton_Click(object sender, RoutedEventArgs e)
         {
-            PageContent.Content = _settingsPage;
+            _avatarCustomizationPage.LoadData(); // 페이지를 표시하기 전에 항상 데이터를 새로고침
+            PageContent.Content = _avatarCustomizationPage;
             UpdateNavButtonSelection(sender as Button);
+        }
+
+        // 대시보드에서 호출할 수 있는 네비게이션 메서드
+        public void NavigateToAvatarCustomization()
+        {
+            AvatarButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         }
 
         private void AnalysisButton_Click(object sender, RoutedEventArgs e)
@@ -82,29 +84,20 @@ namespace WorkPartner
             UpdateNavButtonSelection(sender as Button);
         }
 
-        private void ShopButton_Click(object sender, RoutedEventArgs e)
+        private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
-            _shopPage.LoadSettings();
-            PageContent.Content = _shopPage;
-            UpdateNavButtonSelection(sender as Button);
-        }
-
-        private void ClosetButton_Click(object sender, RoutedEventArgs e)
-        {
-            _closetPage.LoadData();
-            PageContent.Content = _closetPage;
+            PageContent.Content = _settingsPage;
             UpdateNavButtonSelection(sender as Button);
         }
 
         public void ToggleMiniTimer()
         {
-            var settings = LoadSettings();
+            var settings = DataManager.LoadSettings();
             if (settings.IsMiniTimerEnabled)
             {
                 if (_miniTimerWindow == null || !_miniTimerWindow.IsVisible)
                 {
                     _miniTimerWindow = new MiniTimerWindow();
-                    // [수정] 오류의 원인이 되는 Owner 속성 설정 제거
                     _miniTimerWindow.Show();
                     _dashboardPage?.SetMiniTimerReference(_miniTimerWindow);
                 }
@@ -116,16 +109,6 @@ namespace WorkPartner
                 _dashboardPage?.SetMiniTimerReference(null);
             }
         }
-
-        private AppSettings LoadSettings()
-        {
-            string settingsFilePath = "app_settings.json";
-            if (File.Exists(settingsFilePath))
-            {
-                var json = File.ReadAllText(settingsFilePath);
-                return JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
-            }
-            return new AppSettings();
-        }
     }
 }
+

@@ -20,10 +20,12 @@ namespace WorkPartner
         public Dictionary<ItemType, string> CustomColors { get; set; }
         public Dictionary<string, string> TaskColors { get; set; } = new Dictionary<string, string>();
 
+        // --- 추가된 속성 ---
+        public string Username { get; set; }
+        public int Level { get; set; }
+        public Dictionary<string, double> SoundVolumes { get; set; }
+        // ------------------
 
-        /// <summary>
-        /// [속성 추가] 미니 타이머(항상 위) 기능 활성화 여부
-        /// </summary>
         public bool IsMiniTimerEnabled { get; set; }
 
         public AppSettings()
@@ -36,11 +38,23 @@ namespace WorkPartner
             FocusModeNagMessage = "할 일을 합시다!";
             FocusModeNagIntervalSeconds = 30;
             TagRules = new Dictionary<string, string>();
-            Coins = 0;
+            Coins = 1000; // 초기 코인
             OwnedItemIds = new List<Guid>();
             EquippedItems = new Dictionary<ItemType, Guid>();
             CustomColors = new Dictionary<ItemType, string>();
-            IsMiniTimerEnabled = false; // 기본값은 비활성화
+            IsMiniTimerEnabled = false;
+
+            // --- 추가된 속성 초기화 ---
+            Username = "신규 사용자";
+            Level = 1;
+            SoundVolumes = new Dictionary<string, double>
+            {
+                { "Wave", 0.0 },
+                { "Forest", 0.0 },
+                { "Rain", 0.0 },
+                { "Campfire", 0.0 }
+            };
         }
     }
 }
+
